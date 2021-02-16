@@ -4,7 +4,6 @@ cd ~/slam_path_planning
 
 if grep '^VERSION="16.04.7 LTS (Xenial Xerus)"$' /etc/os-release ; then
 	echo "Updating..."
-	exit
 	git fetch --all
 	git reset --hard origin/main
 	git pull
