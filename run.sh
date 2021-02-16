@@ -8,6 +8,8 @@ if grep '^VERSION="16.04.7 LTS (Xenial Xerus)"$' /etc/os-release ; then
 	git reset --hard origin/main
 	git pull
 
+	git checkout testing
+
 	source ~/fsd_skeleton/fsd_environment.sh
 	
 	roslaunch fssim_interface fssim.launch &
