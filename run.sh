@@ -7,6 +7,10 @@ if grep '^VERSION="16.04.7 LTS (Xenial Xerus)"$' /etc/os-release ; then
 	git fetch --all
 	git reset --hard origin/main
 	git pull
+
+	source ~/fsd_skeleton/fsd_environment.sh
+	
+	roslaunch fssim_interface fssim.launch &
 else
 
 	echo "Not inside ROS Container; Halting"

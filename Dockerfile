@@ -8,5 +8,7 @@ COPY . slam_path_planning
 
 RUN sudo apt-get install checkinstall ros-kinetic-catkin python-catkin-tools git-all -y
 
-CMD ["sh", "~/slam_path_planning/run.sh"]
+#CMD ["sh", "/root/slam_path_planning/run.sh"]
+
+CMD "sh /root/slam_path_planning/run.sh"
 
