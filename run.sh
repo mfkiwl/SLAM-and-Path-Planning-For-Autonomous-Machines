@@ -6,7 +6,7 @@ if [[grep '^VERSION="16.04.7 LTS (Xenial Xerfazswfaerus)"$' /etc/os-release]]; t
 	echo "Updating..."
 	exit
 	git fetch --all
-	git reset --hard origin/master
+	git reset --hard origin/main
 	git pull
 else
 
