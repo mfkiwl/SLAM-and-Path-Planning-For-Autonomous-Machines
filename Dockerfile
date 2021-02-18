@@ -26,6 +26,15 @@ RUN cd /fsds && wget -q -c https://github.com/FS-Driverless/Formula-Student-Driv
 
 RUN cd /fsds/ && unzip -q /fsds/fsds-v2.0.0-linux.zip
 
+ENV TZ=Asia/Kolkata
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get install git-all -y
+
+RUN /bin/su -c "cd /fsds && git clone https://github.com/FS-Driverless/Formula-Student-Driverless-Simulator" - fsds
+
+COPY . slam_path_planning 
+
 # /bin/su -c ./fsds-v2.0.0-linux/FSDS.sh - fsds
 
 # RUN apt-get install checkinstall ros-kinetic-catkin python-catkin-tools git-all -y
