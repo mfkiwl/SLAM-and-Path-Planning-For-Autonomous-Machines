@@ -1,4 +1,4 @@
-cd ~/slam_path_planning
+cd /slam_path_planning
 
 # 16.04.7 LTS (Xenial Xerus)
 
