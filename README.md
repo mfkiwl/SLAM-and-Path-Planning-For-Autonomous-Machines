@@ -53,19 +53,14 @@ sudo docker build -t slam_path_planning:v2 .
 To run the container
 
 ```bash
-docker run --runtime=nvidia -it -d --gpus all --net=host -e DISPLAY -v /tmp/.X11-unix -e NVIDIA_DRIVER_CAPABILITIES=all slam_path_planning:v2 bash
+docker run --runtime=nvidia -it -d --gpus all --net=host -e DISPLAY -v /tmp/.X11-unix -e NVIDIA_DRIVER_CAPABILITIES=all --env DDISPLAY_COOKIE="(DISPLAY_COOKIE)" slam_path_planning:v2 /bin/sh /fsds/run.sh
 ```
 
-Once attached to the container, run 
-```bash
-/bin/su -c "touch .Xauthority" - fsds
+Replace (DISPLAY_COOKIE) with the your machine's xauth display cookie, it should look like the following: 
 
-/bin/su -c "xauth add <cookie>" - fsds
-
-/bin/su -c /fsds/fsds-v2.0.0-linux/FSDS.sh - fsds
-```
-
-Cookie is obtained from host machine using :
 ```bash
 xauth list
+username/machine:0 MIT-MAGIC-COOKIE-1 [32 character string]
 ```
+
+

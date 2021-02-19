@@ -33,8 +33,11 @@ RUN apt-get install git-all -y
 
 RUN /bin/su -c "cd /fsds && git clone https://github.com/FS-Driverless/Formula-Student-Driverless-Simulator" - fsds
 
-COPY . slam_path_planning 
+RUN /bin/su -c "touch .Xauthority" - fsds
 
+COPY . /fsds 
+
+CMD "sh /fsds/run.sh"
 # /bin/su -c ./fsds-v2.0.0-linux/FSDS.sh - fsds
 
 # RUN apt-get install checkinstall ros-kinetic-catkin python-catkin-tools git-all -y
