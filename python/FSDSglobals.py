@@ -1,11 +1,12 @@
 import numpy as np
+import math
 
 state_grid_size = 20
 
 action_size = 20
-state_size = state_grid_size
+state_size = state_grid_size**2
 
-qtable = np.zeros((state_size, action_size))
+# qtable = np.zeros((state_size, action_size))
 
 total_episodes = 15000        # Total episodes
 learning_rate = 0.8           # Learning rate
@@ -13,7 +14,7 @@ max_steps = 99                # Max steps per episode
 gamma = 0.95                  # Discounting rate
 
 # Exploration parameters
-epsilon = 1.0                 # Exploration rate
+# epsilon = 1.0                 # Exploration rate
 max_epsilon = 1.0             # Exploration probability at start
 min_epsilon = 0.01            # Minimum exploration probability 
 decay_rate = 0.005             # Exponential decay rate for exploration prob
