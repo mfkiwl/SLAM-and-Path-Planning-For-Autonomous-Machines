@@ -3,8 +3,8 @@
   "Vehicles": {
     "FSCar": {
       "DefaultVehicleState": "",
-      "EnableCollisionPassthrogh": false,
-      "EnableCollisions": true,
+      "EnableCollisionPassthrogh": true,
+      "EnableCollisions": false,
       "AllowAPIAlways": true,
       "RC":{
           "RemoteControlID": -1

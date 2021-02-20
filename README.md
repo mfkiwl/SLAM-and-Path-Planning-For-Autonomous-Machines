@@ -24,3 +24,13 @@ Access the VNC server at localhost:5900. Once inside the container, the followin
 ```bash
 sh ~/slam_path_planning/run.sh
 ```
+
+# TODO
+
+1. [IMP] Reset cones OR disable cone collision
+2. [IMP] Checkpointing and naming training
+3. Proper reward function
+4. Switch from Lidar to vision
+5. Integrate ELAS
+6. Camera calibration
+

@@ -65,7 +65,7 @@ def start_learning(env):
 
             new_state, reward, done, info = env.step(action)
             
-            print(time.time(), info, action, reward, sep="\t")
+            # print(time.time(), info, action, reward, sep="\t")
             qtable.setdefault(str(new_state), dict())
 
             for i in range(-1, 1, action_size):
@@ -83,13 +83,12 @@ def start_learning(env):
             
             # If done (if we're dead) : finish episode
             if done == True:
-                print("===========reset==============")
                 break
             
         # Reduce epsilon (because we need less and less exploration)
         epsilon = min_epsilon + (max_epsilon - min_epsilon)*np.exp(-decay_rate*episode) 
         rewards.append(total_rewards)
-
+        print("===========reset==============")
         # TODO : Save Episode with number
 
     print ("Score over time: " +  str(sum(rewards)/total_episodes))
