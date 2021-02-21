@@ -113,6 +113,23 @@ class Env:
         car_state = self.client.getCarState()
         # print(dir(self.client))
         self.collisions = self.client.client.call("simGetCollisionInfo", 'FSCar')
+        # TODO Compute track path from RefereeState
+        """
+        <RefereeState> {
+            'cones': [
+                {
+                    'color': 0,
+                    'x': 5519.39501953125,
+                    'y': 8775.1943359375
+                }, ... 
+            ],
+            'doo_counter': 3,
+            'initial_position': <Point2D> { 'x': 4575.15283203125, 'y': 8577.8154296875 },
+            'laps': [ 4.393726348876953 ]
+        }
+        """
+        self.referee = self.client.getRefereeState()
+        print(self.referee)
         # print(self.collisions)
         # {'has_collided': False, 'penetration_depth': 0.0, 'time_stamp': 0, 'normal': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'impact_point': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'position': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'object_name': '', 'object_id': -1}
 
