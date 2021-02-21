@@ -27,6 +27,7 @@ class Env:
     def __init__(self, client):
         self.client = client # FSDSClient()
         self.action_space = Space([np.linspace(-1,1,action_size), np.linspace(-1,1,action_size)])
+        self.compute_track_boundaries()
         pass
 
     def reset(self):
@@ -47,6 +48,28 @@ class Env:
                 if distance(cone['x'], cone['y'], 0, 0):
                     self.state[int(x_index), int(y_index)] = 1
         return self.state
+
+    def compute_track_boundaries(self):
+
+        # TODO Compute track path from RefereeState
+        # TODO Graph out track and cones with colour
+        # TODO Live position of car in track
+        """
+        <RefereeState> {
+            'cones': [
+                {
+                    'color': 0,
+                    'x': 5519.39501953125,
+                    'y': 8775.1943359375
+                }, ... 
+            ],
+            'doo_counter': 3,
+            'initial_position': <Point2D> { 'x': 4575.15283203125, 'y': 8577.8154296875 },
+            'laps': [ 4.393726348876953 ]
+        }
+        """
+        self.referee = self.client.getRefereeState()
+        print(self.referee)
 
     def compute_reward(self):
         res = 0
@@ -113,23 +136,7 @@ class Env:
         car_state = self.client.getCarState()
         # print(dir(self.client))
         self.collisions = self.client.client.call("simGetCollisionInfo", 'FSCar')
-        # TODO Compute track path from RefereeState
-        """
-        <RefereeState> {
-            'cones': [
-                {
-                    'color': 0,
-                    'x': 5519.39501953125,
-                    'y': 8775.1943359375
-                }, ... 
-            ],
-            'doo_counter': 3,
-            'initial_position': <Point2D> { 'x': 4575.15283203125, 'y': 8577.8154296875 },
-            'laps': [ 4.393726348876953 ]
-        }
-        """
-        self.referee = self.client.getRefereeState()
-        print(self.referee)
+
         # print(self.collisions)
         # {'has_collided': False, 'penetration_depth': 0.0, 'time_stamp': 0, 'normal': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'impact_point': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'position': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'object_name': '', 'object_id': -1}
 
