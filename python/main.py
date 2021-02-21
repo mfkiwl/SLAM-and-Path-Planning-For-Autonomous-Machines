@@ -48,7 +48,7 @@ import time
 import numpy
 import math
 
-import cv2
+# import cv2
 
 ## adds the fsds package located the parent directory to the pyhthon path
 sys.path.insert(0, os.path.abspath(os.path.join(os.getenv("HOME"), "Formula-Student-Driverless-Simulator/python")))

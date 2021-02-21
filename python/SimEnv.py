@@ -5,7 +5,7 @@ import random
 import time
 import math
 from FSDSglobals import *
-
+from Track import TrackCompute
 sys.path.insert(0, os.path.abspath(os.path.join(os.getenv("HOME"), "Formula-Student-Driverless-Simulator/python")))
 import fsds
 
@@ -68,8 +68,10 @@ class Env:
             'laps': [ 4.393726348876953 ]
         }
         """
-        self.referee = self.client.getRefereeState()
-        print(self.referee)
+        self.tc = TrackCompute(self.client.getRefereeState())
+        self.tc.compute()
+        # self.tc.update_car_position()
+        self.tc.render()
 
     def compute_reward(self):
         res = 0
