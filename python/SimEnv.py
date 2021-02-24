@@ -68,17 +68,37 @@ class Env:
             'laps': [ 4.393726348876953 ]
         }
         """
-        self.tc = TrackCompute(self.client.getRefereeState())
+        self.rf = self.client.getRefereeState()
+        self.tc = TrackCompute(self.rf)
         self.tc.compute()
-        # self.tc.update_car_position()
-        self.tc.render()
+
 
     def compute_reward(self):
+        """<KinematicsState> {
+            'angular_acceleration': <Vector3r> 
+            'angular_velocity': <Vector3r> ,
+            'linear_acceleration': <Vector3r> ,
+            'linear_velocity': <Vector3r> ,
+            'orientation': <Quaternionr> ,
+            'position': <Vector3r> {   'x_val': 7.125288009643555, 'y_val': 0.3718554675579071, 'z_val': 0.2494993507862091}
+        }
+        """
+        car_state = self.client.getCarState()
+        self.kinematics = self.client.simGetGroundTruthKinematics()
+        self.gps_data = self.client.getGpsData()
+        x = self.kinematics.position.x_val + self.rf.initial_position.x
+        y = self.kinematics.position.y_val + self.rf.initial_position.y
+
+        #print(car_state)
+        
         res = 0
         done = False
         # TODO Compute reward and done
 
         cones = self.find_cones()
+        
+        self.tc.update_car_position(x, y, cones)
+        self.tc.render()
 
         num_cones = len(cones)
         if num_cones < 2:
@@ -135,7 +155,7 @@ class Env:
                 cone_reward += -10
                 # done = True
         
-        car_state = self.client.getCarState()
+
         # print(dir(self.client))
         self.collisions = self.client.client.call("simGetCollisionInfo", 'FSCar')
 

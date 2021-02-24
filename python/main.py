@@ -58,6 +58,14 @@ import fsds
 import qlearn
 import SimEnv
 
+import datetime
+import time
+import argparse
+
+parser = argparse.ArgumentParser(description='Q Learning based Optimal Control')
+parser.add_argument("--name", help="Name of the checkpoints folder, defaults to timestamp", default=datetime.datetime.fromtimestamp(time.time()).isoformat())
+args = parser.parse_args()
+print(args)
 
 # connect to the simulator 
 client = fsds.FSDSClient()
@@ -70,4 +78,4 @@ client.enableApiControl(True)
 
 env = SimEnv.Env(client)
 
-qlearn.start_learning(env)
+qlearn.start_learning(env, args.name)

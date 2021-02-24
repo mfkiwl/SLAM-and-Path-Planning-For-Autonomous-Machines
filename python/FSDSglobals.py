@@ -25,7 +25,7 @@ decay_rate = 0.005             # Exponential decay rate for exploration prob
 max_throttle = 0.2 # m/s^2
 target_speed = 4 # m/s
 max_steering = 0.3
-cones_range_cutoff = 7 # meters
+cones_range_cutoff = 10 # meters
 
 def pointgroup_to_cone(group):
     average_x = 0

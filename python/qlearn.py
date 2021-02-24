@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import time
+import os
 from FSDSglobals import *
 
 rewards = []
@@ -31,7 +32,11 @@ def max_d_a(d):
     res_a = list(map(float, res_a.split(",")))
     return res_a
 
-def start_learning(env):
+def start_learning(env, name):
+    save_folder = os.path.join("checkpoints", name)
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+    
     epsilon = 1.0
     # qtable = np.zeros((state_size, action_size))
     qtable = dict()
@@ -42,8 +47,10 @@ def start_learning(env):
         step = 0
         done = False
         total_rewards = 0
-        
+        start_time = time.time()
+        step_counter = 0
         for step in range(max_steps):
+            step_counter = step
             # 3. Choose an action a in the current world state (s)
             ## First we randomize a number
             exp_exp_tradeoff = random.uniform(0, 1)
@@ -84,7 +91,12 @@ def start_learning(env):
             # If done (if we're dead) : finish episode
             if done == True:
                 break
-            
+        
+        end_time = time.time()
+        run_time = end_time - start_time
+        frame_rate = step_counter / run_time
+        print("FPS: ", frame_rate, "; \t run_time: ", run_time)
+        np.save(os.path.join(save_folder, str(episode) + "_qtable.npy"), qtable)   
         # Reduce epsilon (because we need less and less exploration)
         epsilon = min_epsilon + (max_epsilon - min_epsilon)*np.exp(-decay_rate*episode) 
         rewards.append(total_rewards)
@@ -94,4 +106,4 @@ def start_learning(env):
     print ("Score over time: " +  str(sum(rewards)/total_episodes))
     print(qtable)
 
-    numpy.save("qtable.npy", qtable)
+    np.save(os.path.join(save_folder, "qtable.npy"), qtable)
