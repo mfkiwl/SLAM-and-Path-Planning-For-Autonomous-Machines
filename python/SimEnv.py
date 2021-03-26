@@ -34,7 +34,8 @@ class Env:
         self.client.reset()
         self.compute_state() # np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
         # self.client
-        return self.state.flatten()
+        # return self.state.flatten()
+        return self.state
 
     def compute_state(self):
         cones = self.find_cones()
@@ -73,6 +74,9 @@ class Env:
         self.tc.compute()
 
 
+    def render(self):
+        self.tc.render()
+
     def compute_reward(self):
         """<KinematicsState> {
             'angular_acceleration': <Vector3r> 
@@ -98,7 +102,6 @@ class Env:
         cones = self.find_cones()
         
         self.tc.update_car_position(x, y, cones)
-        self.tc.render()
 
         num_cones = len(cones)
         if num_cones < 2:
@@ -167,6 +170,7 @@ class Env:
             print(self.collisions)
             res += -50
             done = True
+            self.reset()
             
         res += car_state.speed / 3 
         #if car_state.speed>0 and car_state.speed<0.9999:
@@ -195,7 +199,8 @@ class Env:
 
         reward, done = self.compute_reward()
         info = self.client.getCarState()
-        return new_state.flatten(), reward, done, info
+        #return new_state.flatten(), reward, done, info
+        return new_state, reward, done, info
     
     def find_cones(self):
         # Get the pointcloud
