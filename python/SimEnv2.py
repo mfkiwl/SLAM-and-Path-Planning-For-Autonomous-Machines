@@ -1,8 +1,13 @@
 import numpy as np
 import sys
 import os
+from datetime import datetime
 import random
 import time
+import subprocess
+import signal
+import logging
+from threading import Timer
 import math
 from FSDSglobals import *
 from Track import TrackCompute
@@ -24,17 +29,216 @@ class Space:
 class Env:
     # TODO Add velocity to state
     # TODO Make grid nxm not nxn
-    def __init__(self, client):
-        self.client = client # FSDSClient()
+    def __init__(self, track=TRACKS[0]):
+        # self.client = client # FSDSClient()
         self.action_space = Space([np.linspace(-1,1,action_size), np.linspace(-1,1,action_size)])
-        self.compute_track_boundaries()
+        #self.compute_track_boundaries()
+        self.track = track
+
+        # The list of log-lines shown in the operator web gui
+        self.logs = []
+
+        # The mission that the team should use
+        self.mission = None
+
+        # The unreal engine map that is loaded when starting the simulator.
+        self.track = None
+
+        # The process descriptor of the simulator
+        self.simulation_process = None
+
+        # For every simulation launch, a new logfile is created and referee state (like lap times and DOO cones ) are stored.
+        # This is the file object for the current run.
+        self.log_file = None
+
+        # Wether or not competition mode is enabled or disabled (boolean)
+        #self.competition_mode = None 
+
+        # Wether or not the finished signal is received
+        self.finished_signal_received = False
+
+        # The rpc client connected to the simulation. Used to retrieve referee state.
+        self.client = None
+        
+        # The timer that triggers periodic referee state updates.
+        self.referee_state_timer = None
         pass
 
+    def log(self, line):
+        line = str(datetime.now()) + ": " + line
+        #self.logs.append(line)
+        #self.log_file.write(line + '\n')
+        #print(line, flush=True)
+
+    def launch_simulator(self):
+        # Abort if simulator is already running
+        if self.simulation_process is not None:
+            print(400, 'Simulation already running.')
+
+        # Get team config
+        self.mission = MISSIONS[0] # request.json['mission']
+        self.track = TRACKS[0] # request.json['track']
+        
+        # Create log file. Create logs directory if it does not exist
+        filename = 'logs/{}_{}_{}.txt'.format(str(datetime.now().strftime("%d-%m-%Y_%H%M%S")), "DDQ", self.mission)
+        simfilename = 'logs/{}_{}_{}_SIM.txt'.format(str(datetime.now().strftime("%d-%m-%Y_%H%M%S")), "DDQ", self.mission)
+        if not os.path.exists(os.path.dirname(filename)):
+            try:
+                os.makedirs(os.path.dirname(filename))
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+        # Write to log file
+        self.log_file = open(filename, 'w')
+        self.log("created logfile " + filename)
+
+        self.finished_signal_received = False
+
+        # Write team specific car settings to settings.json
+        #filename = os.path.realpath(os.path.dirname(__file__)) + '/../settings.json'
+        #with open(filename, 'w') as file:
+        #    json.dump(self.team['car_settings'], file, sort_keys=True, indent=4, separators=(',', ': '))
+
+        proc = None
+        try:
+            # Launch Unreal Engine simulator
+            #proc = subprocess.Popen(['../simulator/FSDS.exe', '/Game/'+self.track+'?listen'])
+            simfile = open(simfilename, 'w')
+            proc = subprocess.Popen(['../../Apps/fsds-v2.0.0-linux/FSDS.sh', '/Game/'+self.track+'?listen'], stdout=simfile)
+
+            time.sleep(10)
+
+            # Create connection with airsim car client
+            #self.client = fsds.CarClient()
+            self.client = fsds.FSDSClient()
+            self.client.confirmConnection()
+            self.client.enableApiControl(True)
+
+            self.compute_track_boundaries()
+
+            # Get referee state
+            ref =  self.client.getRefereeState()
+            self.doo_count = ref.doo_counter
+            self.lap_times = ref.laps
+
+            # Start referee state listener
+            self.referee_state_timer = Timer(1.5, self.referee_state_listener)
+            self.referee_state_timer.start()
+
+            self.simulation_process = proc
+
+            self.log('Launched simulator. {} {} {}'.format("DDQ", self.track, self.mission))
+            
+            return {}  
+        except Exception as e:
+            #e = sys.exc_info()[0]
+            print("Error while launching simulator", e)
+            print(e)
+            self.shutdown_process(proc)
+            exit(1)
+            raise
+
+    def exit_simulator(self):
+        # Abort if simulator is not running
+        if self.simulation_process is None:
+            print(400, 'Simulation not running.')
+            return
+
+        if self.client is not None:
+            print("CLIENT RESET")
+            self.client.reset()
+            #time.sleep(1)
+
+        # Close airsim client connection
+        self.client = None
+        self.referee_state_timer = None
+
+        # Shutdown simulation processes
+        self.shutdown_process(self.simulation_process)
+        self.simulation_process = None
+    
+        self.log('Exited simulator.')
+        
+        return {}  
+
+    def get_config(self):
+        return {
+            'team': "DDQ",
+            'mission': self.mission,
+            'track': self.track,
+            #'competition_mode': self.competition_mode,
+        }
+
+    def shutdown_process(self, proc):
+        if proc is None:
+            return
+        if proc.poll() is None:
+            print("Sim shutdown")
+            # process has not (yet) terminated. 
+            
+            # Try to stop it gracefully.
+            #os.kill(proc.pid, signal.CTRL_BREAK_EVENT)
+            os.kill(proc.pid, signal.SIGINT)
+            #time.sleep(5)
+            
+            # Still running?
+            if proc.poll() is None:
+                # Kill it with fire
+                proc.terminate()
+                # Wait for it to finish
+                proc.wait()
+            
+            # Going to kill all related processes created by simulation_process
+            #os.system("taskkill /im Blocks* /F")
+            os.system("killall Blocks")
+
+    def poll_server_state(self):
+
+        return {
+            'logs': self.logs,
+            'simulator_state': True if self.simulation_process is not None else False,
+        }
+
+    def finished(self):
+        if self.finished_signal_received:
+            return {}
+        self.log("Received finished signal from autonomous system.")
+        self.finished_signal_received = True
+        return {}
+
+    def referee_state_listener(self):
+        if self.referee_state_timer is None:
+            return
+        self.referee_state_timer = Timer(1.5, self.referee_state_listener)
+        self.referee_state_timer.start()
+        try:
+            ref = self.client.getRefereeState()
+
+            if self.doo_count != ref.doo_counter:
+                delta = ref.doo_counter - self.doo_count
+
+                for d in range(self.doo_count + 1, self.doo_count + delta + 1):
+                    self.log('Cone hit. {} cone(s) DOO.'.format(d))
+                    
+                self.doo_count = ref.doo_counter
+
+            if len(self.lap_times) != len(ref.laps):
+                self.lap_times = ref.laps
+                lap_count = len(self.lap_times)
+                lap_time = self.lap_times[-1]
+                self.log('Lap ' + str(lap_count) + ' completed. Lap time: ' + str(round(lap_time, 3)) + ' s.')
+        except:
+            pass
+
+
     def reset(self):
-        self.client.reset()
-        self.compute_state() # np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
+        #self.client.reset()
+        #self.compute_state() # np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
         # self.client
         # return self.state.flatten()
+        self.exit_simulator()
+        time.sleep(3)
+        self.launch_simulator()
         return self.state
 
     def compute_state(self):
@@ -151,6 +355,7 @@ class Env:
         if num_cones < 2:
             res += -30
             done = True
+            self.reset()
             return res, done
         # Mean of x axis should be close to zero
         x_sum = 0

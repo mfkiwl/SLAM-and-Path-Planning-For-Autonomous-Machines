@@ -3,14 +3,20 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.getenv("HOME"), "Formula-Student-Driverless-Simulator/python")))
 import fsds
 
+import matplotlib.pyplot as plt
+
 import qlearn
-import SimEnv
+import SimEnv2 as SimEnv
 
 import argparse
 from collections import deque
 from CarRacingDQNAgent import CarRacingDQNAgent
 from common_functions import process_state_image
 from common_functions import generate_state_frame_stack_from_queue
+
+plt.ion()
+plt.show(block=False)
+
 
 RENDER                        = True
 STARTING_EPISODE              = 1
@@ -28,15 +34,15 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--epsilon', type=float, default=1.0, help='The starting epsilon of the agent, default to 1.0.')
     args = parser.parse_args()
     # connect to the simulator 
-    client = fsds.FSDSClient()
+    #client = fsds.FSDSClient()
 
     # Check network connection, exit if not connected
-    client.confirmConnection()
+    #client.confirmConnection()
 
     # After enabling setting trajectory setpoints via the api. 
-    client.enableApiControl(True)
+    #client.enableApiControl(True)
 
-    env = SimEnv.Env(client)
+    env = SimEnv.Env()
     agent = CarRacingDQNAgent(epsilon=args.epsilon)
     if args.model:
         agent.load(args.model)
@@ -65,6 +71,15 @@ if __name__ == '__main__':
             reward = 0
             for _ in range(SKIP_FRAMES+1):
                 next_state, r, done, info = env.step(action)
+
+                if RENDER:
+                    env.render()
+                #plt.figure(1); plt.clf()
+                #plt.imshow(next_state)
+                #plt.title('state')
+                #plt.draw()
+                #plt.pause(0.001)
+                
                 reward += r
                 if done:
                     break

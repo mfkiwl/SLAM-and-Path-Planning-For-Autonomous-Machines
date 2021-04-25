@@ -140,3 +140,6 @@ dmypy.json
 cython_debug/
 
 save/
+logs/
+python/__pycache__/
+*.pyc

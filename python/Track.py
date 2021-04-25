@@ -27,16 +27,19 @@ plt.ion()
 plt.show(block=False)
 
 def distance(x1, y1, x2, y2):
+    #print(x1, x2)
     return ( (x1-x2)**2 + (y1-y2)**2 )**0.5
 
 class TrackCompute:
 
-    def __init__(self, RefereeState):
+    def __init__(self, RefereeState, CarState):
         self.rs = RefereeState
+        self.cs = CarState
         self.car_pos = dict()
         # print(self.rs)
 
-    def render(self):
+    def render(self, CarState):
+        self.cs = CarState
         global ax1, ax2
         ax1.set_aspect('equal', adjustable='box')
         # ax2.set_aspect('equal', adjustable='box')
@@ -54,8 +57,21 @@ class TrackCompute:
         if self.car_pos["x"] and self.car_pos["y"]:
             ax1.plot(self.car_pos["x"], self.car_pos["y"], "o", color="r")
             ax2.cla()
-            ax2.plot(0, 0, "o", color="r") 
-            ax2.plot(self.car_cones["x"], self.car_cones["y"], "o", color="b")
+            #ax2.imshow(self.cs)
+            for c in self.cones:
+                flt = {'x':[], 'y':[]}
+                for i in range(len(self.cones[c]["x"])):
+                    x = self.cones[c]["x"][i]
+                    y = self.cones[c]["y"][i]
+                    d = distance(x, y, self.car_pos['x'], self.car_pos['y'])
+                    print(d)
+                    if d < 500:
+                        flt['x'].append(x)
+                        flt['y'].append(y)
+                ax2.plot(flt["x"], flt["y"], "o", color=getColor(c))
+            #ax2.title("CarState")
+            #ax2.plot(0, 0, "o", color="r") 
+            #ax2.plot(self.car_cones["x"], self.car_cones["y"], "o", color="b")
             #for c in self.cones:
             #    for i in range(len(self.cones[c]["x"])):
             #        near = {"x": [], "y": []}
