@@ -52,7 +52,7 @@ if __name__ == '__main__':
         ENDING_EPISODE = args.end
 
     for e in range(STARTING_EPISODE, ENDING_EPISODE+1):
-        init_state = env.reset()
+        init_state = env.reset("New Episode " + str(e))
         init_state = process_state_image(init_state)
 
         total_reward = 0
