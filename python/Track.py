@@ -64,7 +64,7 @@ class TrackCompute:
                     x = self.cones[c]["x"][i]
                     y = self.cones[c]["y"][i]
                     d = distance(x, y, self.car_pos['x'], self.car_pos['y'])
-                    print(d)
+                    #print(d)
                     if d < 500:
                         flt['x'].append(x)
                         flt['y'].append(y)

@@ -1,5 +1,7 @@
 {
   "SettingsVersion": 1.2,
+  "ViewMode": "NoDisplay",
+  "ClockSpeed": 1.0,
   "Vehicles": {
     "FSCar": {
       "DefaultVehicleState": "",

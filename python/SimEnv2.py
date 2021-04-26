@@ -62,6 +62,8 @@ class Env:
         
         # The timer that triggers periodic referee state updates.
         self.referee_state_timer = None
+
+        self.reset_message = ""
         pass
 
     def log(self, line):
@@ -173,7 +175,7 @@ class Env:
         if proc is None:
             return
         if proc.poll() is None:
-            print("Sim shutdown")
+            #print("Sim shutdown")
             # process has not (yet) terminated. 
             
             # Try to stop it gracefully.
@@ -231,11 +233,13 @@ class Env:
             pass
 
 
-    def reset(self):
+    def reset(self, message):
+        print("Sim Reset : ", message, " : ", self.reset_message)
         #self.client.reset()
         #self.compute_state() # np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
         # self.client
         # return self.state.flatten()
+        self.reset_message = ""
         self.exit_simulator()
         time.sleep(3)
         self.launch_simulator()
@@ -355,7 +359,7 @@ class Env:
         if num_cones < 2:
             res += -30
             done = True
-            self.reset()
+            self.reset_message += " Less than 2 cones visible "
             return res, done
         # Mean of x axis should be close to zero
         x_sum = 0
@@ -419,7 +423,7 @@ class Env:
             print(self.collisions)
             res += -50
             done = True
-            self.reset()
+            self.reset_message += " Collision "
             
         res += car_state.speed / 3 
         #if car_state.speed>0 and car_state.speed<0.9999:
