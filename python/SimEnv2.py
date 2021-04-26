@@ -70,9 +70,9 @@ class Env:
 
     def log(self, line):
         line = str(datetime.now()) + ": " + line
-        #self.logs.append(line)
-        #self.log_file.write(line + '\n')
-        #print(line, flush=True)
+        self.logs.append(line)
+        self.log_file.write(line + '\n')
+        print(line, flush=True)
 
     def launch_simulator(self):
         # Abort if simulator is already running
