@@ -229,7 +229,6 @@ class Env:
         
         return cones_hit
 
-
     def reset(self, message):
         print("Sim Reset : ", message, " : ", self.reset_message)
         # self.client
@@ -244,12 +243,16 @@ class Env:
         # TODO : Generate image with cones
         self.state = np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
         for cone in self.cones:
-            x_index = state_grid_size - ( cone['x'] + state_grid_size//2 )
-            y_index = state_grid_size - ( cone['y'] + state_grid_size//2 )
+            #x_index = (state_grid_size - ( cone['x']*SCALE_FACTOR + state_grid_size//2 )) 
+            x_index = int(state_grid_size - ( cone['x']*SCALE_FACTOR + state_grid_size*0.1 )) 
+            y_index = int(state_grid_size - ( cone['y']*SCALE_FACTOR + state_grid_size//2 )) 
 
             if 0 <= x_index < state_grid_size and 0 <= y_index < state_grid_size:
                 #if distance(cone['x'], cone['y'], 0, 0):
-                self.state[int(x_index), int(y_index)] = 1
+                for i in range(x_index-CONE_RADIUS, x_index+CONE_RADIUS):
+                    for j in range(y_index-CONE_RADIUS, y_index+CONE_RADIUS):
+                        if 0 <= i < state_grid_size and 0 <= j < state_grid_size:
+                            self.state[i, j] = 1
         return self.state
 
     def compute_track_boundaries(self):
@@ -276,6 +279,7 @@ class Env:
 
 
     def render(self):
+        # if OPTIMIZE_FPS: return
         x = self.kinematics.position.x_val + self.referee_state.initial_position.x
         y = self.kinematics.position.y_val + self.referee_state.initial_position.y
         
@@ -283,16 +287,19 @@ class Env:
         #y = self.car_state.kinematics_estimated.position.y_val + self.referee_state.initial_position.y
         
         self.tc.update_car_position(x, y, self.cones)
-        
-        self.tc.render(self.state, self.images[0], self.images[1], self.images[2])
+        self.tc.render(self.referee_state, self.state, self.images[0], self.images[1], self.images[2], self.cones)
 
     def get_images(self):
-        #z = np.zeros((10,10))
-        #return z, z, z
+        if OPTIMIZE_FPS:
+            z = np.zeros((10,10))
+            return z, z, z
+        
+        # TODO : Maybe reduce image size for performance?
+
         responses = self.client.simGetImages([
             fsds.ImageRequest("cam1", fsds.ImageType.Scene, False, False),
             fsds.ImageRequest("cam2", fsds.ImageType.Scene, False, False),
-            fsds.ImageRequest("cam3", fsds.ImageType.DepthPlanner, pixels_as_float = True, compress=False)
+            fsds.ImageRequest("cam3", fsds.ImageType.DepthPlanner, pixels_as_float=True, compress=False)
         ])
         
         response = responses[0]

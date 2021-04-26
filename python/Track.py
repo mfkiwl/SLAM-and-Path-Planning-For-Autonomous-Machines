@@ -40,8 +40,10 @@ class TrackCompute:
         self.car_pos = dict()
         # print(self.rs)
 
-    def render(self, CarState, imgL, imgR, imgD):
+    def render(self, RefereeState, CarState, imgL, imgR, imgD, nearby_cones):
+        self.rs = RefereeState
         self.cs = CarState
+        self.compute()
         global ax1, ax2, ax3, ax4
         ax3.imshow(imgL)
         ax4.imshow(CarState)
@@ -54,7 +56,6 @@ class TrackCompute:
         # plt.clf()
         for c in self.cones:
             ax1.plot(self.cones[c]["x"], self.cones[c]["y"], "o", color=getColor(c))
-
 
         self.car_pos.setdefault("x", False)
         self.car_pos.setdefault("y", False)
@@ -72,7 +73,7 @@ class TrackCompute:
                     if d < 500:
                         flt['x'].append(x)
                         flt['y'].append(y)
-                ax2.plot(flt["x"], flt["y"], "o", color=getColor(c))
+                # ax2.plot(flt["x"], flt["y"], "o", color=getColor(c))
             #ax2.title("CarState")
             #ax2.plot(0, 0, "o", color="r") 
             #ax2.plot(self.car_cones["x"], self.car_cones["y"], "o", color="b")
@@ -83,6 +84,12 @@ class TrackCompute:
             #            near["x"].append(self.cones[c]["x"][i])
             #            near["y"].append(self.cones[c]["y"][i])
             #        ax2.plot(near["x"], near["y"], "o", color=getColor(c))
+        
+        flt = {'x':[], 'y':[]}
+        for p in nearby_cones:
+            flt['x'].append(p['x'])
+            flt['y'].append(p['y'])
+        ax2.plot(flt["y"], flt["x"], "o", color='red')
 
         plt.draw()
         plt.pause(0.001)

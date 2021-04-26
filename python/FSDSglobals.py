@@ -28,6 +28,10 @@ target_speed = 4 # m/s
 max_steering = 0.3
 cones_range_cutoff = state_grid_size // 2# 10 # meters
 
+OPTIMIZE_FPS = True
+SCALE_FACTOR = 4.5
+CONE_RADIUS = 2
+
 def pointgroup_to_cone(group):
     average_x = 0
     average_y = 0
