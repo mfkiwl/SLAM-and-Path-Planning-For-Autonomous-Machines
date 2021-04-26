@@ -35,7 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--start', type=int, help='The starting episode, default to 1.')
     parser.add_argument('-e', '--end', type=int, help='The ending episode, default to 1000.')
     parser.add_argument('-p', '--epsilon', type=float, default=1.0, help='The starting epsilon of the agent, default to 1.0.')
-    parser.add_argument('-exe', '--executable', type=str, help='Path to FSDS.sh')
+    parser.add_argument('-exe', '--executable', type=str, default="../../Apps/fsds-v2.0.0-linux/FSDS.sh", help='Path to FSDS.sh')
     args = parser.parse_args()
     # connect to the simulator 
     #client = fsds.FSDSClient()

@@ -113,21 +113,21 @@ class Env:
             time.sleep(10)
 
             # Create connection with airsim car client
-            #self.client = fsds.CarClient()
             self.client = fsds.FSDSClient()
             self.client.confirmConnection()
             self.client.enableApiControl(True)
 
+            self.getAllSimData()
+
             self.compute_track_boundaries()
 
             # Get referee state
-            ref =  self.client.getRefereeState()
-            self.doo_count = ref.doo_counter
-            self.lap_times = ref.laps
+            self.doo_count = self.referee_state.doo_counter
+            self.lap_times = self.referee_state.laps
 
             # Start referee state listener
-            self.referee_state_timer = Timer(1.5, self.referee_state_listener)
-            self.referee_state_timer.start()
+            #self.referee_state_timer = Timer(1.5, self.referee_state_listener)
+            #self.referee_state_timer.start()
 
             self.simulation_process = proc
 
@@ -211,34 +211,27 @@ class Env:
         return {}
 
     def referee_state_listener(self):
-        if self.referee_state_timer is None:
-            return
-        self.referee_state_timer = Timer(1.5, self.referee_state_listener)
-        self.referee_state_timer.start()
-        try:
-            ref = self.client.getRefereeState()
+        cones_hit = 0
+        if self.doo_count != self.referee_state.doo_counter:
+            delta = self.referee_state.doo_counter - self.doo_count
+            cones_hit = delta
 
-            if self.doo_count != ref.doo_counter:
-                delta = ref.doo_counter - self.doo_count
-
-                for d in range(self.doo_count + 1, self.doo_count + delta + 1):
-                    self.log('Cone hit. {} cone(s) DOO.'.format(d))
+            for d in range(self.doo_count + 1, self.doo_count + delta + 1):
+                self.log('Cone hit. {} cone(s) DOO.'.format(d))
                     
-                self.doo_count = ref.doo_counter
+            self.doo_count = self.referee_state.doo_counter
 
-            if len(self.lap_times) != len(ref.laps):
-                self.lap_times = ref.laps
-                lap_count = len(self.lap_times)
-                lap_time = self.lap_times[-1]
-                self.log('Lap ' + str(lap_count) + ' completed. Lap time: ' + str(round(lap_time, 3)) + ' s.')
-        except:
-            pass
+        if len(self.lap_times) != len(self.referee_state.laps):
+            self.lap_times = self.referee_state.laps
+            lap_count = len(self.lap_times)
+            lap_time = self.lap_times[-1]
+            self.log('Lap ' + str(lap_count) + ' completed. Lap time: ' + str(round(lap_time, 3)) + ' s.')
+        
+        return cones_hit
 
 
     def reset(self, message):
         print("Sim Reset : ", message, " : ", self.reset_message)
-        #self.client.reset()
-        #self.compute_state() # np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
         # self.client
         # return self.state.flatten()
         self.reset_message = ""
@@ -248,10 +241,9 @@ class Env:
         return self.state
 
     def compute_state(self):
-        cones = self.find_cones()
         # TODO : Generate image with cones
         self.state = np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
-        for cone in cones:
+        for cone in self.cones:
             x_index = state_grid_size - ( cone['x'] + state_grid_size//2 )
             y_index = state_grid_size - ( cone['y'] + state_grid_size//2 )
 
@@ -279,28 +271,20 @@ class Env:
             'laps': [ 4.393726348876953 ]
         }
         """
-        self.rf = self.client.getRefereeState()
-        self.state = self.compute_state()
-        self.tc = TrackCompute(self.rf, self.state)
+        self.tc = TrackCompute(self.referee_state, self.state)
         self.tc.compute()
 
 
     def render(self):
-        car_state = self.client.getCarState()
-        self.kinematics = self.client.simGetGroundTruthKinematics()
-        self.gps_data = self.client.getGpsData()
-        x = self.kinematics.position.x_val + self.rf.initial_position.x
-        y = self.kinematics.position.y_val + self.rf.initial_position.y
+        x = self.kinematics.position.x_val + self.referee_state.initial_position.x
+        y = self.kinematics.position.y_val + self.referee_state.initial_position.y
         
-        #x = car_state.kinematics_estimated.position.x_val + self.rf.initial_position.x
-        #y = car_state.kinematics_estimated.position.y_val + self.rf.initial_position.y
-        cones = self.find_cones()
+        #x = self.car_state.kinematics_estimated.position.x_val + self.referee_state.initial_position.x
+        #y = self.car_state.kinematics_estimated.position.y_val + self.referee_state.initial_position.y
         
-        self.tc.update_car_position(x, y, cones)
+        self.tc.update_car_position(x, y, self.cones)
         
-        self.state = self.compute_state()
-        imgL, imgR, imgD = self.get_images()
-        self.tc.render(self.state, imgL, imgR, imgD)
+        self.tc.render(self.state, self.images[0], self.images[1], self.images[2])
 
     def get_images(self):
         #z = np.zeros((10,10))
@@ -383,26 +367,21 @@ class Env:
     'speed': -7.0243090704025235e-06,
     'timestamp': 1616825965530656000}
         """
-        car_state = self.client.getCarState()
-        self.kinematics = self.client.simGetGroundTruthKinematics()
-        self.gps_data = self.client.getGpsData()
-        x = self.kinematics.position.x_val + self.rf.initial_position.x
-        y = self.kinematics.position.y_val + self.rf.initial_position.y
+        x = self.kinematics.position.x_val + self.referee_state.initial_position.x
+        y = self.kinematics.position.y_val + self.referee_state.initial_position.y
         
-        x = car_state.kinematics_estimated.position.x_val + self.rf.initial_position.x
-        y = car_state.kinematics_estimated.position.y_val + self.rf.initial_position.y
+        x = self.car_state.kinematics_estimated.position.x_val + self.referee_state.initial_position.x
+        y = self.car_state.kinematics_estimated.position.y_val + self.referee_state.initial_position.y
         #print(x, y)
-        #print(car_state)
+        #print(self.car_state)
         
         res = 0
         done = False
         # TODO Compute reward and done
-
-        cones = self.find_cones()
         
-        self.tc.update_car_position(x, y, cones)
+        self.tc.update_car_position(x, y, self.cones)
 
-        num_cones = len(cones)
+        num_cones = len(self.cones)
         if num_cones < 2:
             res += -30
             done = True
@@ -410,7 +389,7 @@ class Env:
             return res, done
         # Mean of x axis should be close to zero
         x_sum = 0
-        for cone in cones:
+        for cone in self.cones:
             x_sum += cone['x']
         x_avg = x_sum / num_cones
         
@@ -427,7 +406,7 @@ class Env:
         # res += res_x_avg
         # Count the number of cones
 
-        sorted_cones = sorted(cones, key=lambda cone: cone['y'])
+        sorted_cones = sorted(self.cones, key=lambda cone: cone['y'])
         left_cones = sorted_cones[:num_cones//2]
         right_cones = sorted_cones[num_cones//2:]
         if num_cones%2!=0:
@@ -457,25 +436,19 @@ class Env:
             else:
                 cone_reward += -10
                 # done = True
-        
 
-        # print(dir(self.client))
-        self.collisions = self.client.client.call("simGetCollisionInfo", 'FSCar')
-
-        # print(self.collisions)
-        # {'has_collided': False, 'penetration_depth': 0.0, 'time_stamp': 0, 'normal': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'impact_point': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'position': {'x_val': 0.0, 'y_val': 0.0, 'z_val': 0.0}, 'object_name': '', 'object_id': -1}
-
-        if self.collisions["has_collided"]:
+        cones_hit = self.referee_state_listener()
+        if cones_hit>0:
             print("========collision=========")
-            print(self.collisions)
+            #print(self.referee_state)
             res += -50
             done = True
             self.reset_message += " Collision "
             
-        res += car_state.speed / 3 
-        #if car_state.speed>0 and car_state.speed<0.9999:
-        #    res += -1 * math.log(1 - car_state.speed) / 4
-        #elif (car_state.speed>=1):
+        res += self.car_state.speed / 3 
+        #if self.car_state.speed>0 and self.car_state.speed<0.9999:
+        #    res += -1 * math.log(1 - self.car_state.speed) / 4
+        #elif (self.car_state.speed>=1):
         #    res += 1.2
         return res, done
 
@@ -494,24 +467,23 @@ class Env:
         self.client.setCarControls(car_controls)
 
         # time.sleep(0.3)
-
-        new_state = self.compute_state()
+        
+        self.getAllSimData()
+        #new_state = self.compute_state()
 
         reward, done = self.compute_reward()
-        info = self.client.getCarState()
+        info = "" # TODO : Add timing data here
         #return new_state.flatten(), reward, done, info
-        return new_state, reward, done, info
+        return self.state, reward, done, info
     
-    def find_cones(self):
-        # Get the pointcloud
-        lidardata = self.client.getLidarData(lidar_name = 'Lidar')
 
+    def find_cones(self):
         # no points
-        if len(lidardata.point_cloud) < 3:
+        if len(self.lidar_data.point_cloud) < 3:
             return []
 
         # Convert the list of floats into a list of xyz coordinates
-        points = np.array(lidardata.point_cloud, dtype=np.dtype('f4'))
+        points = np.array(self.lidar_data.point_cloud, dtype=np.dtype('f4'))
         points = np.reshape(points, (int(points.shape[0]/3), 3))
 
         # Go through all the points and find nearby groups of points that are close together as those will probably be cones.
@@ -535,3 +507,19 @@ class Env:
                         cones.append(cone)
                     current_group = []
         return cones
+    
+    def getAllSimData(self):
+        """
+            Gets all data from sim in one call
+        """
+        self.car_state = self.client.getCarState()
+        self.kinematics = self.client.simGetGroundTruthKinematics()
+        self.gps_data = self.client.getGpsData()
+        self.lidar_data = self.client.getLidarData(lidar_name = 'Lidar')
+        self.referee_state =  self.client.getRefereeState()
+        self.images = self.get_images()
+        self.cones = self.find_cones()
+        self.state = self.compute_state()
+
+        #self.collisions = self.client.client.call("simGetCollisionInfo", 'FSCar') # may not be useful
+        pass
