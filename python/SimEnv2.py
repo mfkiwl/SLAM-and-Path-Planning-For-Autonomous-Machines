@@ -297,7 +297,52 @@ class Env:
         self.tc.update_car_position(x, y, cones)
         
         self.state = self.compute_state()
-        self.tc.render(self.state)
+        imgL, imgR, imgD = self.get_images()
+        self.tc.render(self.state, imgL, imgR, imgD)
+
+    def get_images(self):
+        #z = np.zeros((10,10))
+        #return z, z, z
+        responses = self.client.simGetImages([
+            fsds.ImageRequest("cam1", fsds.ImageType.Scene, False, False),
+            fsds.ImageRequest("cam2", fsds.ImageType.Scene, False, False),
+            fsds.ImageRequest("cam3", fsds.ImageType.DepthPlanner, pixels_as_float = True, compress=False)
+        ])
+        
+        response = responses[0]
+        # get np array
+        img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
+        # reshape array to 4 channel image array H X W X 4
+        imgL = img1d.reshape(response.height, response.width, 3)
+
+        #imgL =cv2.resize(imgL, ( imgL.shape[1]//2, imgL.shape[0]//2 ))
+        # original image is fliped vertically
+        #imgL = np.flipud(img_rgb)
+
+        response = responses[1]
+        # get np array
+        img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8)
+        # reshape array to 4 channel image array H X W X 4
+        imgR = img1d.reshape(response.height, response.width, 3)
+        #imgR =cv2.resize(imgR, ( imgR.shape[1]//2, imgR.shape[0]//2 ))
+
+
+        response = responses[2]
+        # get np array
+        # print(response.image_data_float)
+        #print(dir(response))
+        #img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
+        
+        img1d = np.uint8(response.image_data_float)
+        # img1d = np.array(response.image_data_float)
+        # reshape array to 4 channel image array H X W X 4
+        imgD = img1d.reshape(response.height, response.width, 1)
+        #imgD = cv2.resize(imgD, ( imgD.shape[1]//2, imgD.shape[0]//2 ))
+        
+        #imgLg = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
+        #imgRg = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
+
+        return imgL, imgR, imgD
 
     def compute_reward(self):
         """<KinematicsState> {
