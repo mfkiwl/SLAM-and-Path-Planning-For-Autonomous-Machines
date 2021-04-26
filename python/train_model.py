@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import qlearn
 import SimEnv2 as SimEnv
 
+import time
 import argparse
 from collections import deque
 from CarRacingDQNAgent import CarRacingDQNAgent
@@ -18,7 +19,7 @@ plt.ion()
 plt.show(block=False)
 
 
-RENDER                        = True
+RENDER                        = False
 STARTING_EPISODE              = 1
 ENDING_EPISODE                = 1000
 SKIP_FRAMES                   = 2
@@ -53,6 +54,7 @@ if __name__ == '__main__':
 
     for e in range(STARTING_EPISODE, ENDING_EPISODE+1):
         init_state = env.reset("New Episode " + str(e))
+        start_time = time.time()
         init_state = process_state_image(init_state)
 
         total_reward = 0
@@ -100,7 +102,9 @@ if __name__ == '__main__':
             agent.memorize(current_state_frame_stack, action, reward, next_state_frame_stack, done)
 
             if done or negative_reward_counter >= 25 or total_reward < 0:
-                print('Episode: {}/{}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, time_frame_counter, float(total_reward), float(agent.epsilon)))
+                end_time = time.time()
+                FPS = time_frame_counter/(end_time - start_time)
+                print('Episode: {}/{}, FPS: {}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, FPS, time_frame_counter, float(total_reward), float(agent.epsilon)))
                 break
             if len(agent.memory) > TRAINING_BATCH_SIZE:
                 agent.replay(TRAINING_BATCH_SIZE)
