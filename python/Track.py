@@ -19,8 +19,9 @@ def getColor(c):
         return 'red'
 
 global ax1, ax2 
-ax1 = plt.subplot(1,2,1)
-ax2 = plt.subplot(1,2,2)
+ax1 = plt.subplot(1,3,1)
+ax2 = plt.subplot(1,3,2)
+ax3 = plt.subplot(1,3,3)
 
 plt.ion()
 # plt.draw()
@@ -38,9 +39,10 @@ class TrackCompute:
         self.car_pos = dict()
         # print(self.rs)
 
-    def render(self, CarState):
+    def render(self, CarState, imgL, imgR, imgD):
         self.cs = CarState
-        global ax1, ax2
+        global ax1, ax2, ax3
+        ax3.imshow(imgL)
         ax1.set_aspect('equal', adjustable='box')
         # ax2.set_aspect('equal', adjustable='box')
         ax2.set_xlim([-10,10])

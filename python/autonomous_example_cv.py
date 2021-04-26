@@ -138,6 +138,7 @@ def get_camera():
 
     cv2.imshow("imgL", imgL)
     cv2.imshow("imgD", imgD)
+    cv2.imshow("imgSBGM", stereo)
     
     cv2.waitKey(1)
 

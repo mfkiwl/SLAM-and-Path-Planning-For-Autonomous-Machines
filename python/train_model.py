@@ -27,6 +27,8 @@ TRAINING_BATCH_SIZE           = 64
 SAVE_TRAINING_FREQUENCY       = 25
 UPDATE_TARGET_MODEL_FREQUENCY = 5
 
+CLOCK_SPEED = 0.1
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training a DQN agent to play CarRacing.')
     parser.add_argument('-m', '--model', help='Specify the last trained model path if you want to continue training after it.')
@@ -102,9 +104,13 @@ if __name__ == '__main__':
 
             agent.memorize(current_state_frame_stack, action, reward, next_state_frame_stack, done)
 
-            if done or negative_reward_counter >= 25 or total_reward < 0:
+            if done or negative_reward_counter >= 500 or total_reward < -20:
+                if negative_reward_counter >= 500:
+                    print("negative_reward_counter >= 500")
+                if total_reward < -20:
+                    print("total_reward < -20")
                 end_time = time.time()
-                FPS = time_frame_counter/(end_time - start_time)
+                FPS = time_frame_counter/(end_time - start_time) / CLOCK_SPEED
                 print('Episode: {}/{}, FPS: {}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, FPS, time_frame_counter, float(total_reward), float(agent.epsilon)))
                 break
             if len(agent.memory) > TRAINING_BATCH_SIZE:
