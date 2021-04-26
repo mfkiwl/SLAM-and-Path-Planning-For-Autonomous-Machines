@@ -19,7 +19,7 @@ plt.ion()
 plt.show(block=False)
 
 
-RENDER                        = False
+RENDER                        = True
 STARTING_EPISODE              = 1
 ENDING_EPISODE                = 1000
 SKIP_FRAMES                   = 2
@@ -33,6 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--start', type=int, help='The starting episode, default to 1.')
     parser.add_argument('-e', '--end', type=int, help='The ending episode, default to 1000.')
     parser.add_argument('-p', '--epsilon', type=float, default=1.0, help='The starting epsilon of the agent, default to 1.0.')
+    parser.add_argument('-exe', '--executable', type=str, help='Path to FSDS.sh')
     args = parser.parse_args()
     # connect to the simulator 
     #client = fsds.FSDSClient()
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     # After enabling setting trajectory setpoints via the api. 
     #client.enableApiControl(True)
 
-    env = SimEnv.Env()
+    env = SimEnv.Env(args.executable)
     agent = CarRacingDQNAgent(epsilon=args.epsilon)
     if args.model:
         agent.load(args.model)

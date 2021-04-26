@@ -29,7 +29,9 @@ class Space:
 class Env:
     # TODO Add velocity to state
     # TODO Make grid nxm not nxn
-    def __init__(self, track=TRACKS[0]):
+    def __init__(self, executable, track=TRACKS[0]):
+        self.executable = executable
+
         # self.client = client # FSDSClient()
         self.action_space = Space([np.linspace(-1,1,action_size), np.linspace(-1,1,action_size)])
         #self.compute_track_boundaries()
@@ -106,7 +108,7 @@ class Env:
             # Launch Unreal Engine simulator
             #proc = subprocess.Popen(['../simulator/FSDS.exe', '/Game/'+self.track+'?listen'])
             simfile = open(simfilename, 'w')
-            proc = subprocess.Popen(['../../Apps/fsds-v2.0.0-linux/FSDS.sh', '/Game/'+self.track+'?listen'], stdout=simfile)
+            proc = subprocess.Popen([self.executable, '/Game/'+self.track+'?listen'], stdout=simfile)
 
             time.sleep(10)
 
