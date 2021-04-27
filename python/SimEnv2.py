@@ -358,126 +358,24 @@ class Env:
         return imgL, imgR, imgD
 
     def compute_reward(self):
-        """<KinematicsState> {
-            'angular_acceleration': <Vector3r> 
-            'angular_velocity': <Vector3r> ,
-            'linear_acceleration': <Vector3r> ,
-            'linear_velocity': <Vector3r> ,
-            'orientation': <Quaternionr> ,
-            'position': <Vector3r> {   'x_val': 7.125288009643555, 'y_val': 0.3718554675579071, 'z_val': 0.2494993507862091}
-        }
-        """
-        """
-        <CarState> {   'gear': 0,
-    'handbrake': False,
-    'kinematics_estimated': <KinematicsState> {   'angular_acceleration': <Vector3r> {   'x_val': -0.011636244133114815,
-    'y_val': 0.013664432801306248,
-    'z_val': -7.922106988189626e-07},
-    'angular_velocity': <Vector3r> {   'x_val': 0.00011646282655419782,
-    'y_val': -0.0001731524826027453,
-    'z_val': 1.0502494873776413e-08},
-    'linear_acceleration': <Vector3r> {   'x_val': 5.199217412155122e-07,
-    'y_val': 0.00021228201512712985,
-    'z_val': 0.013618909753859043},
-    'linear_velocity': <Vector3r> {   'x_val': -6.962161023693625e-06,
-    'y_val': -2.0039804439875297e-05,
-    'z_val': -0.0011192987440153956},
-    'orientation': <Quaternionr> {   'w_val': 1.0,
-    'x_val': 3.0327300919452682e-05,
-    'y_val': -2.318620499863755e-05,
-    'z_val': 7.031750182129315e-10},
-    'position': <Vector3r> {   'x_val': 1.4648437172581907e-05,
-    'y_val': 9.765624781721272e-06,
-    'z_val': 0.2462308406829834}},
-    'maxrpm': 13000.0,
-    'rpm': 0.0,
-    'speed': -7.0243090704025235e-06,
-    'timestamp': 1616825965530656000}
-        """
-        x = self.kinematics.position.x_val + self.referee_state.initial_position.x
-        y = self.kinematics.position.y_val + self.referee_state.initial_position.y
-        
-        x = self.car_state.kinematics_estimated.position.x_val + self.referee_state.initial_position.x
-        y = self.car_state.kinematics_estimated.position.y_val + self.referee_state.initial_position.y
-        #print(x, y)
-        #print(self.car_state)
-        
-        res = 0
+        reward = 0
         done = False
-        # TODO Compute reward and done
-        
-        #self.tc.update_car_position(x, y, self.cones)
-
-        num_cones = len(self.cones)
-        if num_cones < 2:
-            res += -30
-            done = True
-            self.reset_message += " Less than 2 cones visible "
-            return res, done
-        # Mean of x axis should be close to zero
-        x_sum = 0
-        for cone in self.cones:
-            x_sum += cone['x']
-        x_avg = x_sum / num_cones
-        
-        res_x_avg = 10
-        if x_avg!=0:
-            res_x_avg = -1 * math.log(abs(x_avg))
-        
-        if res_x_avg > 10:
-            res_x_avg = 10
-
-        if res_x_avg < -10:
-            res_x_avg = -10
-
-        # res += res_x_avg
-        # Count the number of cones
-
-        sorted_cones = sorted(self.cones, key=lambda cone: cone['y'])
-        left_cones = sorted_cones[:num_cones//2]
-        right_cones = sorted_cones[num_cones//2:]
-        if num_cones%2!=0:
-            mid_left = sorted_cones[(num_cones)//2 - 1]
-            middle_cone = sorted_cones[num_cones//2]
-            mid_right = sorted_cones[(num_cones)//2 + 1]
-            
-            left_cones = sorted_cones[:num_cones//2]
-            right_cones = sorted_cones[(num_cones//2)+1:]
-            
-            if abs(mid_left['y'] - middle_cone['y']) < abs(mid_right['y'] - middle_cone['y']):
-                left_cones.append(middle_cone)
-            else:
-                right_cones.append(middle_cone)
-
-        cone_reward = 0
-        for cone in left_cones:
-            if cone['y']>0:
-                cone_reward += 1
-            else:
-                cone_reward += -10
-                # done = True
-        
-        for cone in left_cones:
-            if cone['y']>0:
-                cone_reward += 1
-            else:
-                cone_reward += -10
-                # done = True
+        if self.car_state.speed>=3:
+            reward+=1
 
         cones_hit = self.referee_state_listener()
         if cones_hit>0:
-            print("========collision=========")
-            #print(self.referee_state)
-            res += -50
+            reward-=100
             done = True
-            self.reset_message += " Collision "
-            
-        res += self.car_state.speed / 3 
-        #if self.car_state.speed>0 and self.car_state.speed<0.9999:
-        #    res += -1 * math.log(1 - self.car_state.speed) / 4
-        #elif (self.car_state.speed>=1):
-        #    res += 1.2
-        return res, done
+            self.reset_message += " Cone hit "
+        
+        num_cones = len(self.cones)
+        if num_cones < 2:
+            reward-=200
+            done = True
+            self.reset_message += " Less than 2 cones visible "
+        
+        return reward, done
 
     def step(self, action):
         # TODO Check if action is in action_space

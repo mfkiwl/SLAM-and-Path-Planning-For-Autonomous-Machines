@@ -44,18 +44,20 @@ cpdef train(args):
     cdef int  TRAINING_BATCH_SIZE           = 64
     cdef int  SAVE_TRAINING_FREQUENCY       = 1 # Save the model for every episode
     cdef int  UPDATE_TARGET_MODEL_FREQUENCY = 5
-    cdef int  total_frame_counter # Number of frames run in that episode (used to calculate frame rate)
+    cdef unsigned int  total_frame_counter # Number of frames run in that episode (used to calculate frame rate)
     cdef int  e
     cdef int  _
     cdef int negative_reward_counter
     cdef int time_frame_counter
     cdef float reward
-    cdef float FPS
+    cdef double FPS
     cdef float total_reward
-    cdef float start_time
-    cdef float t1
-    cdef float t2
-    cdef float CLOCK_SPEED = 0.08
+    cdef double start_time
+    cdef double end_time
+    cdef double delta
+    cdef double t1
+    cdef double t2
+    cdef double CLOCK_SPEED = 0.08
 
     env = SimEnv.Env(args.executable)
     agent = CarRacingDQNAgent(epsilon=args.epsilon)
@@ -135,7 +137,12 @@ cpdef train(args):
                 if total_reward < -20:
                     print("total_reward < -20")
                 end_time = time.time()
-                FPS = total_frame_counter/(end_time - start_time) / CLOCK_SPEED
+                delta = (end_time - start_time)
+                if (delta > 0):
+                    FPS = total_frame_counter/delta / CLOCK_SPEED
+                else:
+                    FPS = 999999
+                print(start_time, end_time, total_frame_counter, CLOCK_SPEED)
                 print('Episode: {}/{}, FPS: {}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, FPS, time_frame_counter, float(total_reward), float(agent.epsilon)))
                 break
             if len(agent.memory) > TRAINING_BATCH_SIZE:

@@ -4,7 +4,20 @@ from collections import deque
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 from tensorflow.keras.optimizers import Adam
-
+"""
+        action_space    = [
+            (-1, 0,   0), (0, 0,   0), (1, 0,   0),      # Max steering
+            (-0.75, 0,   0), (-0.5, 0,   0), (-0.25, 0,   0),      # Left range
+            
+        ],
+        
+        action_space    = [
+            (-1, 1, 0.2), (0, 1, 0.2), (1, 1, 0.2), #           Action Space Structure
+            (-1, 1,   0), (0, 1,   0), (1, 1,   0), #        (Steering Wheel, Gas, Break)
+            (-1, 0, 0.2), (0, 0, 0.2), (1, 0, 0.2), # Range        -1~1       0~1   0~1
+            (-1, 0,   0), (0, 0,   0), (1, 0,   0)
+        ],
+        """
 class CarRacingDQNAgent:
     def __init__(
         self,
