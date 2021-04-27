@@ -138,6 +138,7 @@ def get_camera():
 
     cv2.imshow("imgL", imgL)
     cv2.imshow("imgD", imgD)
+    cv2.imshow("imgSBGM", stereo)
     
     cv2.waitKey(1)
 
@@ -200,6 +201,7 @@ def calculate_throttle():
     return max_throttle * max(1 - velocity / target_speed, 0)
 
 while True:
+    start_time = time.time()
     cones = find_cones()
 
     get_camera()
@@ -212,3 +214,6 @@ while True:
     car_controls.throttle = calculate_throttle()
     car_controls.brake = 0
     client.setCarControls(car_controls)
+    end_time = time.time()
+    FPS = 1.0 / (end_time - start_time)
+    print(FPS)

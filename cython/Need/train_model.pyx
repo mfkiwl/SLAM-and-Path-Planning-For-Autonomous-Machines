@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import qlearn
 import SimEnv2 as SimEnv
 
-import time
 from collections import deque
 from CarRacingDQNAgent import CarRacingDQNAgent
 from common_functions import process_state_image
@@ -17,16 +16,8 @@ from common_functions import generate_state_frame_stack_from_queue
 plt.ion()
 plt.show(block=False)
 
-def get_latest_save():
-    save_files = os.listdir("save/")
-    save_files.sort()
-    return os.path.join("save", save_files[-1])
-
 cpdef train(args):
-    print(args)
-    if args.resume:
-        args.model = get_latest_save()
-
+    
     # connect to the simulator 
     #client = fsds.FSDSClient()
 
@@ -36,7 +27,6 @@ cpdef train(args):
     # After enabling setting trajectory setpoints via the api. 
     #client.enableApiControl(True)
     cdef bint RENDER                        = True
-    cdef bint done 
     cdef int  STARTING_EPISODE              = 1
     cdef int  ENDING_EPISODE                = 1000
     cdef int  SKIP_FRAMES                   = 2
@@ -44,32 +34,27 @@ cpdef train(args):
     cdef int  TRAINING_BATCH_SIZE           = 64
     cdef int  SAVE_TRAINING_FREQUENCY       = 1 # Save the model for every episode
     cdef int  UPDATE_TARGET_MODEL_FREQUENCY = 5
-    cdef int  total_frame_counter # Number of frames run in that episode (used to calculate frame rate)
     cdef int  e
-    cdef int  _
+    cdef float total_reward
+    cdef float CLOCK_SPEED = 0.08
     cdef int negative_reward_counter
     cdef int time_frame_counter
+    cdef bint done 
     cdef float reward
-    cdef float FPS
-    cdef float total_reward
-    cdef float start_time
-    cdef float t1
-    cdef float t2
-    cdef float CLOCK_SPEED = 0.08
+    cdef int _
 
-    env = SimEnv.Env(args.executable)
+    env = SimEnv.Env()
     agent = CarRacingDQNAgent(epsilon=args.epsilon)
     if args.model:
-        print("Resuming from ", args.model)
         agent.load(args.model)
     if args.start:
         STARTING_EPISODE = args.start
     if args.end:
         ENDING_EPISODE = args.end
-
+    
+    
     for e in range(STARTING_EPISODE, ENDING_EPISODE+1):
-        init_state = env.reset("New Episode " + str(e))
-        
+        init_state = env.reset()
         init_state = process_state_image(init_state)
 
         total_reward = 0
@@ -78,26 +63,19 @@ cpdef train(args):
         time_frame_counter = 1
         done = False
         
-        start_time = time.time()
-        total_frame_counter = 1
-        
         while True:
-            
+            if RENDER:
+                env.render()
 
-            t1 = time.time()
             current_state_frame_stack = generate_state_frame_stack_from_queue(state_frame_stack_queue)
             action = agent.act(current_state_frame_stack)
-            t2 = time.time()
-            print("agent.act", t2-t1)
 
             reward = 0
             for _ in range(SKIP_FRAMES+1):
                 next_state, r, done, info = env.step(action)
-                total_frame_counter += 1
-                if RENDER and total_frame_counter%SKIP_FRAMES_RENDERING==0: env.render()
 
-                # if RENDER: env.render() # Don't render every frame
-
+                if RENDER:
+                    env.render()
                 #plt.figure(1); plt.clf()
                 #plt.imshow(next_state)
                 #plt.title('state')
@@ -116,41 +94,24 @@ cpdef train(args):
                 reward *= 1.5
 
             total_reward += reward
-            
-            t1 = time.time()
+
             next_state = process_state_image(next_state)
             state_frame_stack_queue.append(next_state)
             next_state_frame_stack = generate_state_frame_stack_from_queue(state_frame_stack_queue)
-            t2 = time.time()
-            print("next_state", t2-t1)
 
-            t1 = time.time()
             agent.memorize(current_state_frame_stack, action, reward, next_state_frame_stack, done)
-            t2 = time.time()
-            print("agent.memorise", t2-t1)
 
-            if done or negative_reward_counter >= 500 or total_reward < -20:
-                if negative_reward_counter >= 500:
-                    print("negative_reward_counter >= 500")
-                if total_reward < -20:
-                    print("total_reward < -20")
-                end_time = time.time()
-                FPS = total_frame_counter/(end_time - start_time) / CLOCK_SPEED
-                print('Episode: {}/{}, FPS: {}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, FPS, time_frame_counter, float(total_reward), float(agent.epsilon)))
+            if done or negative_reward_counter >= 25 or total_reward < 0:
+                print('Episode: {}/{}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, time_frame_counter, float(total_reward), float(agent.epsilon)))
                 break
             if len(agent.memory) > TRAINING_BATCH_SIZE:
-            
-                t1 = time.time()
                 agent.replay(TRAINING_BATCH_SIZE)
-                t2 = time.time()
-                print("agent.replay", t2-t1)
             time_frame_counter += 1
 
         if e % UPDATE_TARGET_MODEL_FREQUENCY == 0:
             agent.update_target_model()
 
         if e % SAVE_TRAINING_FREQUENCY == 0:
-            #agent.save('./save/trial_{:06d}.h5'.format(e))
-            agent.save('./save/trial_{:06d}.h5'.format(int(time.time())))
+            agent.save('./save/trial_{}.h5'.format(e))
 
     env.close()
