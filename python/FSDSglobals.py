@@ -28,7 +28,7 @@ target_speed = 4 # m/s
 max_steering = 0.3
 cones_range_cutoff = state_grid_size // 2# 10 # meters
 
-OPTIMIZE_FPS = True
+OPTIMIZE_FPS = False
 SCALE_FACTOR = 4.5
 CONE_RADIUS = 1
 CAR_RADIUS = 2

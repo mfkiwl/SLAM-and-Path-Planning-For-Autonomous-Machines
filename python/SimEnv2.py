@@ -113,7 +113,7 @@ class Env:
             simfile = open(simfilename, 'w')
             proc = subprocess.Popen([self.executable, '/Game/'+self.track+'?listen'], stdout=simfile)
 
-            time.sleep(10)
+            time.sleep(15)
 
             # Create connection with airsim car client
             self.client = fsds.FSDSClient()

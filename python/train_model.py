@@ -23,6 +23,7 @@ RENDER                        = True
 STARTING_EPISODE              = 1
 ENDING_EPISODE                = 1000
 SKIP_FRAMES                   = 2
+SKIP_FRAMES_RENDERING         = 20
 TRAINING_BATCH_SIZE           = 64
 #SAVE_TRAINING_FREQUENCY       = 25
 SAVE_TRAINING_FREQUENCY       = 1
@@ -82,19 +83,22 @@ if __name__ == '__main__':
         total_frame_counter = 1
         
         while True:
-            if RENDER:
-                env.render()
+            
 
+            t1 = time.time()
             current_state_frame_stack = generate_state_frame_stack_from_queue(state_frame_stack_queue)
             action = agent.act(current_state_frame_stack)
+            t2 = time.time()
+            print("agent.act", t2-t1)
 
             reward = 0
             for _ in range(SKIP_FRAMES+1):
                 next_state, r, done, info = env.step(action)
                 total_frame_counter += 1
+                if RENDER and total_frame_counter%SKIP_FRAMES_RENDERING==0: env.render()
 
-                if RENDER:
-                    env.render()
+                # if RENDER: env.render() # Don't render every frame
+
                 #plt.figure(1); plt.clf()
                 #plt.imshow(next_state)
                 #plt.title('state')
@@ -113,12 +117,18 @@ if __name__ == '__main__':
                 reward *= 1.5
 
             total_reward += reward
-
+            
+            t1 = time.time()
             next_state = process_state_image(next_state)
             state_frame_stack_queue.append(next_state)
             next_state_frame_stack = generate_state_frame_stack_from_queue(state_frame_stack_queue)
+            t2 = time.time()
+            print("next_state", t2-t1)
 
+            t1 = time.time()
             agent.memorize(current_state_frame_stack, action, reward, next_state_frame_stack, done)
+            t2 = time.time()
+            print("agent.memorise", t2-t1)
 
             if done or negative_reward_counter >= 500 or total_reward < -20:
                 if negative_reward_counter >= 500:
@@ -130,13 +140,18 @@ if __name__ == '__main__':
                 print('Episode: {}/{}, FPS: {}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, FPS, time_frame_counter, float(total_reward), float(agent.epsilon)))
                 break
             if len(agent.memory) > TRAINING_BATCH_SIZE:
+            
+                t1 = time.time()
                 agent.replay(TRAINING_BATCH_SIZE)
+                t2 = time.time()
+                print("agent.replay", t2-t1)
             time_frame_counter += 1
 
         if e % UPDATE_TARGET_MODEL_FREQUENCY == 0:
             agent.update_target_model()
 
         if e % SAVE_TRAINING_FREQUENCY == 0:
-            agent.save('./save/trial_{:06d}.h5'.format(e))
+            #agent.save('./save/trial_{:06d}.h5'.format(e))
+            agent.save('./save/trial_{:06d}.h5'.format(int(time.time())))
 
     env.close()
