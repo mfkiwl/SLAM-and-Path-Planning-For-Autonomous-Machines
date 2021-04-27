@@ -89,6 +89,7 @@ def update_graph():
 
     POINTS = numpy.array(POINTS)
 
+    """
     if not calculated:
         colors = np.ones(shape=(len(POINTS), 4), dtype=np.float32)
         min_height = min(POINTS[:, 2])
@@ -111,7 +112,9 @@ def update_graph():
         # 0 67.95823145281865 67.95823145281865
         print(min_dist, max_dist, dist_range)
         calculated = True
-
+    """
+    min_height = 0
+    max_height = 0
     colors = np.ones(shape=(len(POINTS), 4), dtype=np.float32)
 
     if len(POINTS)>0:
@@ -198,6 +201,7 @@ max_throttle = 0.2 # m/s^2
 target_speed = 4 # m/s
 max_steering = 0.3
 cones_range_cutoff = 7 # meters
+#cones_range_cutoff = 20 # meters
 
 def pointgroup_to_cone(group):
     average_x = 0
@@ -283,11 +287,11 @@ def find_cones():
     points = numpy.array(lidardata.point_cloud, dtype=numpy.dtype('f4'))
     points = numpy.reshape(points, (int(points.shape[0]/3), 3))
 
-    process_lidar(points)
     # Go through all the points and find nearby groups of points that are close together as those will probably be cones.
 
     current_group = []
     cones = []
+    cones_lidar = []
     for i in range(1, len(points)):
 
         # Get the distance from current to previous point
@@ -303,7 +307,10 @@ def find_cones():
                 # calculate distance between lidar and cone
                 if distance(0, 0, cone['x'], cone['y']) < cones_range_cutoff:
                     cones.append(cone)
+                    cones_lidar.append((cone['x'], cone['y'], 0))
                 current_group = []
+    process_lidar(points)
+    #process_lidar(cones_lidar)
     return cones
 
 def calculate_steering(cones):

@@ -1,7 +1,7 @@
 {
   "SettingsVersion": 1.2,
   "ViewMode": "NoDisplay",
-  "ClockSpeed": 1.0,
+  "ClockSpeed": 0.1,
   "Vehicles": {
     "FSCar": {
       "DefaultVehicleState": "",
@@ -28,7 +28,7 @@
           "HorizontalFOVStart": -90,
           "HorizontalFOVEnd": 90,
           "RotationsPerSecond": 10,
-          "DrawDebugPoints": true
+          "DrawDebugPoints": false
         }
       },
       "Cameras": {
@@ -36,8 +36,8 @@
           "CaptureSettings": [
           {
               "ImageType": 0,
-              "Width": 1382,
-              "Height": 512,
+              "Width": 345,
+              "Height": 128,
               "FOV_Degrees": 90
           }
           ],
@@ -52,8 +52,8 @@
           "CaptureSettings": [
             {
               "ImageType": 0,
-              "Width": 1382,
-              "Height": 512,
+              "Width": 345,
+              "Height": 128,
               "FOV_Degrees": 90
             }
           ],
@@ -68,8 +68,8 @@
           "CaptureSettings": [
             {
               "ImageType": 1,
-              "Width": 1382,
-              "Height": 512,
+              "Width": 345,
+              "Height": 128,
               "FOV_Degrees": 90
             }
           ],

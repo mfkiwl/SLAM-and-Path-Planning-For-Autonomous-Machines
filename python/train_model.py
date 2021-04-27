@@ -24,10 +24,16 @@ STARTING_EPISODE              = 1
 ENDING_EPISODE                = 1000
 SKIP_FRAMES                   = 2
 TRAINING_BATCH_SIZE           = 64
-SAVE_TRAINING_FREQUENCY       = 25
+#SAVE_TRAINING_FREQUENCY       = 25
+SAVE_TRAINING_FREQUENCY       = 1
 UPDATE_TARGET_MODEL_FREQUENCY = 5
 
-CLOCK_SPEED = 0.1
+CLOCK_SPEED = 0.08
+
+def get_latest_save():
+    save_files = os.listdir("save/")
+    save_files.sort()
+    return os.path.join("save", save_files[-1])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training a DQN agent to play CarRacing.')
@@ -36,7 +42,12 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--end', type=int, help='The ending episode, default to 1000.')
     parser.add_argument('-p', '--epsilon', type=float, default=1.0, help='The starting epsilon of the agent, default to 1.0.')
     parser.add_argument('-exe', '--executable', type=str, default="../../Apps/fsds-v2.0.0-linux/FSDS.sh", help='Path to FSDS.sh')
+    parser.add_argument('-r', '--resume', default=False, action='store_true', help='Will resume training from latest save')
     args = parser.parse_args()
+
+    if args.resume:
+        args.model = get_latest_save()
+
     # connect to the simulator 
     #client = fsds.FSDSClient()
 
@@ -49,6 +60,7 @@ if __name__ == '__main__':
     env = SimEnv.Env(args.executable)
     agent = CarRacingDQNAgent(epsilon=args.epsilon)
     if args.model:
+        print("Resuming from ", args.model)
         agent.load(args.model)
     if args.start:
         STARTING_EPISODE = args.start
@@ -57,7 +69,7 @@ if __name__ == '__main__':
 
     for e in range(STARTING_EPISODE, ENDING_EPISODE+1):
         init_state = env.reset("New Episode " + str(e))
-        start_time = time.time()
+        
         init_state = process_state_image(init_state)
 
         total_reward = 0
@@ -65,6 +77,9 @@ if __name__ == '__main__':
         state_frame_stack_queue = deque([init_state]*agent.frame_stack_num, maxlen=agent.frame_stack_num)
         time_frame_counter = 1
         done = False
+        
+        start_time = time.time()
+        total_frame_counter = 1
         
         while True:
             if RENDER:
@@ -76,6 +91,7 @@ if __name__ == '__main__':
             reward = 0
             for _ in range(SKIP_FRAMES+1):
                 next_state, r, done, info = env.step(action)
+                total_frame_counter += 1
 
                 if RENDER:
                     env.render()
@@ -110,7 +126,7 @@ if __name__ == '__main__':
                 if total_reward < -20:
                     print("total_reward < -20")
                 end_time = time.time()
-                FPS = time_frame_counter/(end_time - start_time) / CLOCK_SPEED
+                FPS = total_frame_counter/(end_time - start_time) / CLOCK_SPEED
                 print('Episode: {}/{}, FPS: {}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, FPS, time_frame_counter, float(total_reward), float(agent.epsilon)))
                 break
             if len(agent.memory) > TRAINING_BATCH_SIZE:
@@ -121,6 +137,6 @@ if __name__ == '__main__':
             agent.update_target_model()
 
         if e % SAVE_TRAINING_FREQUENCY == 0:
-            agent.save('./save/trial_{}.h5'.format(e))
+            agent.save('./save/trial_{:06d}.h5'.format(e))
 
     env.close()

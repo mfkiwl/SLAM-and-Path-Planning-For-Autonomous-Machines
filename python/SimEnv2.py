@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import random
 import time
+import threading
 import subprocess
 import signal
 import logging
@@ -66,6 +67,8 @@ class Env:
         self.referee_state_timer = None
 
         self.reset_message = ""
+
+        self.timers = {}
         pass
 
     def log(self, line):
@@ -239,7 +242,33 @@ class Env:
         self.launch_simulator()
         return self.state
 
-    def compute_state(self):
+    def compute_state(self, lidar_pc):
+        # TODO : Generate image with cones
+        state = np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
+        origin = (int(state_grid_size*0.1), int(state_grid_size//2))
+        
+        for p in lidar_pc:
+            #x_index = (state_grid_size - ( cone['x']*SCALE_FACTOR + state_grid_size//2 )) 
+            x_index = int(state_grid_size - ( p[0]*SCALE_FACTOR + origin[0] )) 
+            y_index = int(state_grid_size - ( p[1]*SCALE_FACTOR + origin[1] )) 
+
+            if 0 <= x_index < state_grid_size and 0 <= y_index < state_grid_size:
+                #if distance(cone['x'], cone['y'], 0, 0):
+                for i in range(x_index-CONE_RADIUS, x_index+CONE_RADIUS):
+                    for j in range(y_index-CONE_RADIUS, y_index+CONE_RADIUS):
+                        if 0 <= i < state_grid_size and 0 <= j < state_grid_size:
+                            state[i, j] = 255
+        
+        #x_index = (state_grid_size - ( cone['x']*SCALE_FACTOR + state_grid_size//2 )) 
+        
+        for i in range(origin[0]-CAR_RADIUS, origin[0]+CAR_RADIUS):
+             for j in range(origin[1]-CAR_RADIUS, origin[1]+CAR_RADIUS):
+                if 0 <= i < state_grid_size and 0 <= j < state_grid_size:
+                    state[-i, -j] = 255 // 2
+        #self.state[-origin[0], -origin[1]] = 255//2
+        return state
+
+    def compute_state_cones(self):
         # TODO : Generate image with cones
         self.state = np.zeros((state_grid_size, state_grid_size), dtype=np.uint8)
         for cone in self.cones:
@@ -254,6 +283,7 @@ class Env:
                         if 0 <= i < state_grid_size and 0 <= j < state_grid_size:
                             self.state[i, j] = 1
         return self.state
+
 
     def compute_track_boundaries(self):
 
@@ -274,12 +304,15 @@ class Env:
             'laps': [ 4.393726348876953 ]
         }
         """
+        if OPTIMIZE_FPS: return
+
         self.tc = TrackCompute(self.referee_state, self.state)
         self.tc.compute()
 
 
     def render(self):
-        # if OPTIMIZE_FPS: return
+        if OPTIMIZE_FPS: return
+
         x = self.kinematics.position.x_val + self.referee_state.initial_position.x
         y = self.kinematics.position.y_val + self.referee_state.initial_position.y
         
@@ -287,11 +320,11 @@ class Env:
         #y = self.car_state.kinematics_estimated.position.y_val + self.referee_state.initial_position.y
         
         self.tc.update_car_position(x, y, self.cones)
-        self.tc.render(self.referee_state, self.state, self.images[0], self.images[1], self.images[2], self.cones)
+        self.tc.render(self.referee_state, self.state, self.images[0], self.images[1], self.images[2], self.cones, self.gps_data)
 
     def get_images(self):
+        z = np.zeros((10,10))
         if OPTIMIZE_FPS:
-            z = np.zeros((10,10))
             return z, z, z
         
         # TODO : Maybe reduce image size for performance?
@@ -299,7 +332,7 @@ class Env:
         responses = self.client.simGetImages([
             fsds.ImageRequest("cam1", fsds.ImageType.Scene, False, False),
             fsds.ImageRequest("cam2", fsds.ImageType.Scene, False, False),
-            fsds.ImageRequest("cam3", fsds.ImageType.DepthPlanner, pixels_as_float=True, compress=False)
+            #fsds.ImageRequest("cam3", fsds.ImageType.DepthPlanner, pixels_as_float=True, compress=False)
         ])
         
         response = responses[0]
@@ -308,33 +341,20 @@ class Env:
         # reshape array to 4 channel image array H X W X 4
         imgL = img1d.reshape(response.height, response.width, 3)
 
-        #imgL =cv2.resize(imgL, ( imgL.shape[1]//2, imgL.shape[0]//2 ))
-        # original image is fliped vertically
-        #imgL = np.flipud(img_rgb)
-
         response = responses[1]
         # get np array
         img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8)
         # reshape array to 4 channel image array H X W X 4
         imgR = img1d.reshape(response.height, response.width, 3)
-        #imgR =cv2.resize(imgR, ( imgR.shape[1]//2, imgR.shape[0]//2 ))
-
-
+        
+        """
         response = responses[2]
-        # get np array
-        # print(response.image_data_float)
-        #print(dir(response))
-        #img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
         
         img1d = np.uint8(response.image_data_float)
-        # img1d = np.array(response.image_data_float)
-        # reshape array to 4 channel image array H X W X 4
         imgD = img1d.reshape(response.height, response.width, 1)
-        #imgD = cv2.resize(imgD, ( imgD.shape[1]//2, imgD.shape[0]//2 ))
+        """
         
-        #imgLg = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
-        #imgRg = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
-
+        imgD = z
         return imgL, imgR, imgD
 
     def compute_reward(self):
@@ -386,7 +406,7 @@ class Env:
         done = False
         # TODO Compute reward and done
         
-        self.tc.update_car_position(x, y, self.cones)
+        #self.tc.update_car_position(x, y, self.cones)
 
         num_cones = len(self.cones)
         if num_cones < 2:
@@ -462,6 +482,7 @@ class Env:
     def step(self, action):
         # TODO Check if action is in action_space
         # TODO return info - debug information
+        self.time_start("step", "start")
 
         car_controls = fsds.CarControls()
         car_controls.steering = action[0]
@@ -473,14 +494,25 @@ class Env:
             car_controls.brake = action[1] * -1
         self.client.setCarControls(car_controls)
 
+        network_thread = threading.Thread(target=self.getAllSimData_async)
+        network_thread.start()
+        
         # time.sleep(0.3)
         
-        self.getAllSimData()
+        #self.getAllSimData()
+        #print(self.kinematics)
         #new_state = self.compute_state()
 
         reward, done = self.compute_reward()
         info = "" # TODO : Add timing data here
         #return new_state.flatten(), reward, done, info
+        network_thread.join()
+
+        self.kinematics, self.kinematics, self.gps_data, self.lidar_data, self.referee_state, self.images, self.cones, self.lidar_pc, self.state = self.network_data
+
+        self.time_start("step", "finish")
+        self.time_print()
+
         return self.state, reward, done, info
     
 
@@ -492,6 +524,8 @@ class Env:
         # Convert the list of floats into a list of xyz coordinates
         points = np.array(self.lidar_data.point_cloud, dtype=np.dtype('f4'))
         points = np.reshape(points, (int(points.shape[0]/3), 3))
+
+        lidar_pc = points
 
         # Go through all the points and find nearby groups of points that are close together as those will probably be cones.
 
@@ -513,20 +547,53 @@ class Env:
                     if distance(0, 0, cone['x'], cone['y']) < cones_range_cutoff:
                         cones.append(cone)
                     current_group = []
-        return cones
-    
-    def getAllSimData(self):
+        return cones, lidar_pc
+
+    def getAllSimData_async(self):
         """
             Gets all data from sim in one call
         """
-        self.car_state = self.client.getCarState()
-        self.kinematics = self.client.simGetGroundTruthKinematics()
-        self.gps_data = self.client.getGpsData()
-        self.lidar_data = self.client.getLidarData(lidar_name = 'Lidar')
-        self.referee_state =  self.client.getRefereeState()
-        self.images = self.get_images()
-        self.cones = self.find_cones()
-        self.state = self.compute_state()
+        cones, lidar_pc = self.find_cones()
+        state = self.compute_state(lidar_pc)
+
+        self.network_data = self.client.getCarState(), self.client.simGetGroundTruthKinematics(), self.client.getGpsData(gps_name="Gps"), self.client.getLidarData(lidar_name = 'Lidar'), self.client.getRefereeState(), self.get_images(), cones, lidar_pc, state
+        #if not OPTIMIZE_FPS:
+
+        #self.network_data.append(cones)
+        #self.network_data.append(lidar_pc)
+        #self.network_data.append(state)
 
         #self.collisions = self.client.client.call("simGetCollisionInfo", 'FSCar') # may not be useful
         pass
+
+    def getAllSimData(self):
+        """
+            Gets all data from sim in one call
+            Takes about 
+            0.08 sec with OPTIMIZE_FPS = False
+            0.003 sec with OPTIMIZE_FPS = True
+        """
+        self.time_start("getAllSimData", "start")
+        self.car_state = self.client.getCarState()
+        self.kinematics = self.client.simGetGroundTruthKinematics()
+        self.gps_data = self.client.getGpsData(gps_name="Gps")
+        self.lidar_data = self.client.getLidarData(lidar_name = 'Lidar')
+        self.referee_state =  self.client.getRefereeState()
+        
+        if not OPTIMIZE_FPS:
+            self.images = self.get_images()
+        
+        self.cones, self.lidar_pc = self.find_cones()
+        self.state = self.compute_state(self.lidar_pc)
+
+        self.time_start("getAllSimData", "finish")
+        #self.collisions = self.client.client.call("simGetCollisionInfo", 'FSCar') # may not be useful
+        pass
+    
+    def time_start(self, fn, point):
+        self.timers.setdefault(fn, {'start':0, 'finish':0})
+        self.timers[fn][point] = time.time()
+    
+    def time_print(self):
+        for fn in self.timers:
+            print(fn, self.timers[fn]['finish'] - self.timers[fn]['start'])
