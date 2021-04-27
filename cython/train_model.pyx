@@ -51,10 +51,9 @@ cpdef train(args):
     cdef int time_frame_counter
     cdef float reward
     cdef double FPS
-    cdef float total_reward
+    cdef double total_reward
     cdef double start_time
     cdef double end_time
-    cdef double delta
     cdef double t1
     cdef double t2
     cdef double CLOCK_SPEED = 0.08
@@ -137,11 +136,7 @@ cpdef train(args):
                 if total_reward < -20:
                     print("total_reward < -20")
                 end_time = time.time()
-                delta = (end_time - start_time)
-                if (delta > 0):
-                    FPS = total_frame_counter/delta / CLOCK_SPEED
-                else:
-                    FPS = 999999
+                FPS = total_frame_counter/(end_time - start_time) / CLOCK_SPEED
                 print(start_time, end_time, total_frame_counter, CLOCK_SPEED)
                 print('Episode: {}/{}, FPS: {}, Scores(Time Frames): {}, Total Rewards(adjusted): {:.2}, Epsilon: {:.2}'.format(e, ENDING_EPISODE, FPS, time_frame_counter, float(total_reward), float(agent.epsilon)))
                 break
