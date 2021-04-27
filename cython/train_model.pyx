@@ -50,12 +50,13 @@ cpdef train(args):
     cdef int negative_reward_counter
     cdef int time_frame_counter
     cdef float reward
-    cdef float FPS
-    cdef float total_reward
-    cdef float start_time
-    cdef float t1
-    cdef float t2
-    cdef float CLOCK_SPEED = 0.08
+    cdef double FPS
+    cdef double total_reward
+    cdef double start_time
+    cdef double end_time
+    cdef double t1
+    cdef double t2
+    cdef double CLOCK_SPEED = 0.08
 
     env = SimEnv.Env(args.executable)
     agent = CarRacingDQNAgent(epsilon=args.epsilon)
