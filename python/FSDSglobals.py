@@ -33,6 +33,21 @@ SCALE_FACTOR = 4.5
 CONE_RADIUS = 1
 CAR_RADIUS = 2
 
+CHECKPOINT_DISTANCE_THRESH = 100 # 30 cm
+
+min_dist_point = 0.5        # m1
+min_dist_penalty = -5.0      # p
+min_dist_max_reward = 5.0   # r
+max_dist_point = 3          # m2
+min_dist_constants = {
+    'a': -1.8 ,
+    'b': -25,
+    'c': 6.1
+}
+# {'a': -2.142857142857143, 'b': 11.071428571428571, 'c': -5.0}
+
+print(min_dist_constants)
+
 def pointgroup_to_cone(group):
     average_x = 0
     average_y = 0

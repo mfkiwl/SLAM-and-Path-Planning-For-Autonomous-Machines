@@ -40,7 +40,7 @@ class TrackCompute:
         self.car_pos = dict()
         # print(self.rs)
 
-    def render(self, RefereeState, CarState, imgL, imgR, imgD, nearby_cones, gps_data):
+    def render(self, RefereeState, CarState, imgL, imgR, imgD, nearby_cones, gps_data,):
         self.rs = RefereeState
         self.cs = CarState
         self.compute()
@@ -60,8 +60,8 @@ class TrackCompute:
         self.car_pos.setdefault("x", False)
         self.car_pos.setdefault("y", False)
 
-        self.car_pos['x'] = gps_data.gnss.geo_point.latitude
-        self.car_pos['y'] = gps_data.gnss.geo_point.longitude
+        #self.car_pos['x'] = car_position.x_val # gps_data.gnss.geo_point.latitude
+        #self.car_pos['y'] = car_position.y_val # gps_data.gnss.geo_point.longitude
 
         if self.car_pos["x"] and self.car_pos["y"]:
             ax1.plot(self.car_pos["x"], self.car_pos["y"], "o", color="r")

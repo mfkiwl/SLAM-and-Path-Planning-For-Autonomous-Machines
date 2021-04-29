@@ -145,6 +145,75 @@ class Env:
             exit(1)
             raise
 
+    def connect_simulator(self):
+        # Abort if simulator is already running
+        if self.simulation_process is not None:
+            print(400, 'Simulation already running.')
+
+        # Get team config
+        self.mission = MISSIONS[0] # request.json['mission']
+        self.track = TRACKS[0] # request.json['track']
+        
+        # Create log file. Create logs directory if it does not exist
+        filename = 'logs/{}_{}_{}.txt'.format(str(datetime.now().strftime("%d-%m-%Y_%H%M%S")), "DDQ", self.mission)
+        simfilename = 'logs/{}_{}_{}_SIM.txt'.format(str(datetime.now().strftime("%d-%m-%Y_%H%M%S")), "DDQ", self.mission)
+        if not os.path.exists(os.path.dirname(filename)):
+            try:
+                os.makedirs(os.path.dirname(filename))
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+        # Write to log file
+        self.log_file = open(filename, 'w')
+        self.log("created logfile " + filename)
+
+        self.finished_signal_received = False
+
+        # Write team specific car settings to settings.json
+        #filename = os.path.realpath(os.path.dirname(__file__)) + '/../settings.json'
+        #with open(filename, 'w') as file:
+        #    json.dump(self.team['car_settings'], file, sort_keys=True, indent=4, separators=(',', ': '))
+
+        proc = None
+        try:
+            # Launch Unreal Engine simulator
+            #proc = subprocess.Popen(['../simulator/FSDS.exe', '/Game/'+self.track+'?listen'])
+            #simfile = open(simfilename, 'w')
+            #proc = subprocess.Popen([self.executable, '/Game/'+self.track+'?listen'], stdout=simfile)
+
+            #time.sleep(15)
+
+            # Create connection with airsim car client
+            self.client = fsds.FSDSClient()
+            self.client.confirmConnection()
+            self.client.enableApiControl(True)
+
+            self.getAllSimData()
+
+            self.compute_track_boundaries()
+
+            # Get referee state
+            self.doo_count = self.referee_state.doo_counter
+            self.lap_times = self.referee_state.laps
+
+            # Start referee state listener
+            #self.referee_state_timer = Timer(1.5, self.referee_state_listener)
+            #self.referee_state_timer.start()
+
+            self.simulation_process = proc
+
+            self.log('Launched simulator. {} {} {}'.format("DDQ", self.track, self.mission))
+            
+            return {}  
+        except Exception as e:
+            #e = sys.exc_info()[0]
+            print("Error while launching simulator", e)
+            print(e)
+            #self.shutdown_process(proc)
+            exit(1)
+            raise
+
+
     def exit_simulator(self):
         # Abort if simulator is not running
         if self.simulation_process is None:
@@ -304,34 +373,6 @@ class Env:
             'laps': [ 4.393726348876953 ]
         }
         """
-        self.cones_gt = {}
-        for cone in self.referee_state.cones: # ["cones"]:
-            # cone['color'].setdefault(3)
-            self.cones_gt.setdefault(cone["color"], [])
-            self.cones_gt[cone['color']].append({
-                'x':cone["x"],
-                'y':cone["y"]
-            })
-        
-        self.checkpoints = []
-        for c1 in self.cones_gt[0]:
-            #print(self.cones_gt[1])
-            cp, d = self.cones_gt[1][0], distance(self.cones_gt[1][0]['x'], self.cones_gt[1][0]['y'], c1['x'], c1['y'])
-            for c2 in self.cones_gt[1]:
-                d2 = distance(c2['x'], c2['y'], c1['x'], c1['y'])
-                if d2 < d:
-                    cp, d = c2, d2
-            
-            self.checkpoints.append({
-                'x': (cp['x'] + c1['x'])/2,
-                'y': (cp['y'] + c1['y'])/2,
-                'c1': c1,
-                'c2': cp,
-                'visited': False
-            })
-        
-        #print(self.checkpoints)
-
         if OPTIMIZE_FPS: return
 
         self.tc = TrackCompute(self.referee_state, self.state)
@@ -344,10 +385,10 @@ class Env:
         #x = self.kinematics.position.x_val + self.referee_state.initial_position.x
         #y = self.kinematics.position.y_val + self.referee_state.initial_position.y
         
-        x = self.vehicle_pose['position']['x_val']*100 + self.referee_state.initial_position.x # self.car_state.kinematics_estimated.position.x_val + 
-        y = self.vehicle_pose['position']['y_val']*100 + self.referee_state.initial_position.y # self.car_state.kinematics_estimated.position.y_val + 
+        x = self.car_state.kinematics_estimated.position.x_val + self.referee_state.initial_position.x
+        y = self.car_state.kinematics_estimated.position.y_val + self.referee_state.initial_position.y
 
-        print(x, self.vehicle_pose['position']['x_val'], y, self.vehicle_pose['position']['y_val'])
+        print(x, self.car_state.kinematics_estimated.position.x_val, y, self.car_state.kinematics_estimated.position.y_val)
         
         self.tc.update_car_position(x, y, self.cones)
         self.tc.render(self.referee_state, self.state, self.images[0], self.images[1], self.images[2], self.cones, self.gps_data)
@@ -404,21 +445,6 @@ class Env:
         #print(self.car_state.kinematics_estimated.position)
         #exit()
 
-        car_x = self.vehicle_pose['position']['x_val']*100 + self.referee_state.initial_position.x # self.car_state.kinematics_estimated.position.x_val + 
-        car_y = self.vehicle_pose['position']['y_val']*100 + self.referee_state.initial_position.y
-        
-        closest_cp, d, index = self.checkpoints[0], distance(self.checkpoints[0]['x'], self.checkpoints[0]['y'], car_x, car_y), 0
-        for i in range(len(self.checkpoints)):
-            c = self.checkpoints[i]
-            d2 = distance(c['x'], c['y'], car_x, car_y)
-            if d2<d:
-                closest_cp, d, index = c, d2, i
-
-        if d<CHECKPOINT_DISTANCE_THRESH and not self.checkpoints[index]['visited']:
-            reward += 100
-            self.checkpoints[index]['visited'] = True
-            self.log("Passed through checkpoint : " + str(closest_cp))
-        
         cones_hit = self.referee_state_listener()
         if cones_hit>0:
             reward-=300
@@ -428,7 +454,7 @@ class Env:
         num_cones = len(self.cones)
         if num_cones < 2:
             reward-=200
-            #done = True
+            done = True
             self.reset_message += " Less than 2 cones visible "
 
         # Sorting 500 elements
@@ -440,26 +466,16 @@ class Env:
         if (len(distance_pc)<10):
             n = len(distance_pc)
         nearest_pc = list(map(lambda p: distance(p[0], p[1], 0,0), distance_pc[:n]))
-        avg_dist = 0.0
-        if len(nearest_pc)>0:
-            avg_dist = sum(nearest_pc) / len(nearest_pc) # mun 0, max 4
-        else:
-            reward-= 50
-            done = True
-            return reward, done
+        avg_dist = sum(nearest_pc) / len(nearest_pc) # mun 0, max 4
 
         
         self.log("Closest point avg : " + str(avg_dist))
         if avg_dist < max_dist_point:
-            #reward += min_dist_constants['b']*math.exp(min_dist_constants['a']*avg_dist) + min_dist_constants['c']
-            pass
+            reward += min_dist_constants['b']*math.exp(min_dist_constants['a']*avg_dist) + min_dist_constants['c']
         else:
             #reward += max_dist_reward
             pass
         #print(avg_dist, nearest_pc)
-
-        if self.car_state.speed==0:
-            reward -=5
 
         if reward == 0:
             reward -= 2
@@ -470,8 +486,6 @@ class Env:
         # TODO Check if action is in action_space
         # TODO return info - debug information
         self.time_start("step", "start")
-
-        #self.client.client.call("simPause", False)
 
         car_controls = fsds.CarControls()
         car_controls.steering = action[0]
@@ -499,7 +513,6 @@ class Env:
 
         self.kinematics, self.kinematics, self.gps_data, self.lidar_data, self.referee_state, self.images, self.cones, self.lidar_pc, self.state = self.network_data
 
-        #self.client.client.call("simPause", True)
         self.time_start("step", "finish")
         #self.time_print()
         self.log("reward : " + str(reward))
@@ -509,7 +522,7 @@ class Env:
     def find_cones(self):
         # no points
         if len(self.lidar_data.point_cloud) < 3:
-            return [], []
+            return []
 
         # Convert the list of floats into a list of xyz coordinates
         points = np.array(self.lidar_data.point_cloud, dtype=np.dtype('f4'))
@@ -545,9 +558,7 @@ class Env:
         """
         cones, lidar_pc = self.find_cones()
         state = self.compute_state(lidar_pc)
-        
-        self.vehicle_pose = self.client.client.call('simGetVehiclePose', 'FSCar')
-        
+
         self.network_data = self.client.getCarState(), self.client.simGetGroundTruthKinematics(), self.client.getGpsData(gps_name="Gps"), self.client.getLidarData(lidar_name = 'Lidar'), self.client.getRefereeState(), self.get_images(), cones, lidar_pc, state
         #if not OPTIMIZE_FPS:
 
@@ -571,7 +582,6 @@ class Env:
         self.gps_data = self.client.getGpsData(gps_name="Gps")
         self.lidar_data = self.client.getLidarData(lidar_name = 'Lidar')
         self.referee_state =  self.client.getRefereeState()
-        self.vehicle_pose = self.client.client.call('simGetVehiclePose', 'FSCar')
         
         if not OPTIMIZE_FPS:
             self.images = self.get_images()

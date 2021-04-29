@@ -6,9 +6,11 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 from tensorflow.keras.optimizers import Adam
 """
         action_space    = [
-            (-1, 0,   0), (0, 0,   0), (1, 0,   0),               # Max steering
-            (-0.75, 0,   0), (-0.5, 0,   0), (-0.25, 0,   0),      # Left range
-            
+            (0, 0,   0), # Neutral
+            (-1, 0,   0), (-0.5, 0,   0),   # Left steer
+            (1, 0,   0), (0.5, 0,   0),     # Right steer
+            (0, 1,  0), (0, 0.5, 0),        # Acceleration
+            (0, 0, 1), (0, 0, 0.5),        # Acceleration
         ],
 
         action_space    = [
@@ -22,10 +24,11 @@ class CarRacingDQNAgent:
     def __init__(
         self,
         action_space    = [
-            (-1, 1, 0.2), (0, 1, 0.2), (1, 1, 0.2), #           Action Space Structure
-            (-1, 1,   0), (0, 1,   0), (1, 1,   0), #        (Steering Wheel, Gas, Break)
-            (-1, 0, 0.2), (0, 0, 0.2), (1, 0, 0.2), # Range        -1~1       0~1   0~1
-            (-1, 0,   0), (0, 0,   0), (1, 0,   0)
+            (0, 0,   0),                    # Neutral
+            (-1, 0,   0), (-0.5, 0, 0),     # Left steer
+            (1, 0,   0), (0.5, 0, 0),       # Right steer
+            (0, 1,  0), (0, 0.5, 0),        # Acceleration
+            (0, 0, 1), (0, 0, 0.5),         # Braking
         ],
         frame_stack_num = 3,
         memory_size     = 5000,
